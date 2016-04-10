@@ -21,7 +21,11 @@ $(ISONAME): $(ASMOBJS) Makefile
 
 .PHONY: clean
 clean:
-	rm -rf $(OBJS)
+	rm -rf $(ASMOBJS) cd-root
+
+.PHONY: distclean
+distclean: clean
+	rm -f $(ISONAME)
 
 .PHONY: sync
 sync:
