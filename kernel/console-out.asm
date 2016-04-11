@@ -27,13 +27,13 @@ console_out:
   ; in: a = signed integer
 .printi:
   xor rdx, rdx
-  xor ecx, ecx
+  xor rcx, rcx
   push rcx  ; terminater
   mov rdi, 10
   test rax, rax
   jns .printi.1
   neg rax
-  neg ecx
+  not ecx
 .printi.1:
   test rax, rax
   jz .printi.2
@@ -48,9 +48,7 @@ console_out:
   mov rdi, [.current_pos]
   test ecx, ecx
   jns .printi.3
-  mov ax, 0x072d
-  mov [edi], ax
-  add edi, 2
+  push 0x072d
 .printi.3:
   pop rax
   test eax, eax
