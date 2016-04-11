@@ -554,5 +554,3 @@ DataSelector64 equ 4 * 8
   db 0xa0
   db 0x00
 gdtend:
-
-  times 4096-($-$$) db 0
