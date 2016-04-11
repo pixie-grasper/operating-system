@@ -267,7 +267,7 @@ volume_descriptor_set_terminated:
   jnz .l2
 .l7:  ; find it!
   mov [int13h42hpacket.numofsector], cx
-  mov word [int13h42hpacket.segment], 0x0300
+  mov word [int13h42hpacket.segment], 0x0200
   mov ah, 0x42
   mov dl, [drive_number]
   mov si, int13h42hpacket
@@ -434,60 +434,33 @@ print:
   pop di
   ret
 
-  cpu 186
-hexprint8:
-  push ax
-  push di
-  push ax
-  mov di, [ds:graphics_current_pos]
-  mov ah, 0x07
-  shr al, 4
-  call itoa
-  mov [gs:di], ax
-  inc di
-  inc di
-  pop ax
-  mov ah, 0x07
-  call itoa
-  mov [gs:di], ax
-  inc di
-  inc di
-  mov [ds:graphics_current_pos], di
-  pop di
-  pop ax
-  ret
-
-itoa:
-  and al, 0x0f
-  add al, 0x30
-  cmp al, 0x3a
-  jb .l1
-  add al, 0x41 - 0x3a
-.l1:
-  ret
-
   cpu x64
   bits 32
 enter_ia32e_mode:
-  ; first, set CR4.PAE
+  ; first, create PML4E, PDPTE
+  xor eax, eax
+  mov dword [eax], 0x1000 + 0x0f
+  mov [eax + 4], eax
+  mov edi, 0x1000
+  mov ecx, 4096 / 8
+  mov edx, eax
+  mov eax, 0x00000000 + 0x8f  ; 1 GiB paging
+.l1:
+  mov [edi], eax
+  mov [edi + 4], edx
+  add eax, 0x40000000
+  adc edx, 0
+  and edx, 0x0f  ; disable a64:a36
+  add edi, 8
+  dec ecx
+  jnz .l1
+  ; then, set CR4.PAE
   mov eax, cr4
   or eax, 0x00000020
   mov cr4, eax
   ; then, load CR3, PML4
   xor eax, eax
   mov cr3, eax
-  ; then, create PML4E, PDPTE, PDTE
-  mov dword [eax], 0x1000 + 0x0f
-  mov [eax + 4], eax
-  mov edi, 0x1000
-  mov ecx, 4096 * 2 / 4
-.l1:
-  mov dword [edi], eax
-  add edi, 4
-  dec ecx
-  jnz .l1
-  mov dword [0x1000], 0x2000 + 0x0f
-  mov dword [0x2000], 0x00000000 + 0x8f
   ; then, set EFER.LME
   ; rdmsr ~> mov edx:eax, MSR[ecx]
   mov ecx, 0xc0000080
@@ -504,14 +477,14 @@ enter_ia32e_mode:
   mov fs, ax
   mov gs, ax
   mov ss, ax
-  jmp CodeSelector64:0x3000
+  jmp CodeSelector64:0x2000
 
 int13h42hpacket:
   db 0x10
   db 0x00
 .numofsector dw 0x0001
 .address: dw 0x0000
-.segment: dw 0x0300
+.segment: dw 0x0100
 .lba:     dq 0x10
 
 okmsg db 'ok.', 0x00

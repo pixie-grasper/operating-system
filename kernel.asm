@@ -1,4 +1,4 @@
-  section .text vstart=0x3000
+  section .text vstart=0x2000
   bits 64
   cpu x64
 
@@ -28,7 +28,7 @@ print:
   ret
 
   align 16
-  section .data vstart=0x3000+($-$$)
+  section .data vstart=0x2000+($-$$)
 graphics_current_pos: dd 0x000b8000
 okmsg: db 'Hello.', 0
 
