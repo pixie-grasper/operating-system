@@ -6,8 +6,8 @@ entry:
   mov rsp, 0x00080000
   mov rsi, okmsg
   call console_out.prints
-  mov rax, 1234567890
-  call console_out.printi
+  mov rax, 0xDEADBEEFFEE1BADD
+  call console_out.printx
   jmp end
 
 end:
