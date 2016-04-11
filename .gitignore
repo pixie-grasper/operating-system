@@ -1,4 +1,6 @@
 *.bin
 *.iso
 *.swp
+*.list
+*.dep
 cd-root/*

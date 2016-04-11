@@ -5,6 +5,7 @@ MKISOFS = mkisofs
 
 ASMSRCS = boot.asm kernel.asm
 ASMOBJS = $(ASMSRCS:.asm=.bin)
+ASMDEPS = $(ASMSRCS:.asm=.dep)
 
 ISONAME = os.iso
 
@@ -17,7 +18,7 @@ $(ISONAME): $(ASMOBJS) Makefile
 	$(MKISOFS) -b boot/boot.bin -hide boot.catalog -no-pad -input-charset iso8859-1 -no-emul-boot -boot-load-seg 0x07c0 -boot-load-size 4 -o $@ cd-root
 
 %.bin: %.asm Makefile
-	$(NASM) -f bin $< -o $@
+	$(NASM) -f bin $< -o $@ -l $*.list -MD $*.dep
 
 .PHONY: clean
 clean:
@@ -32,4 +33,4 @@ sync:
 	git pull origin master
 	git push origin master
 
--include $(DEPS)
+-include $(ASMDEPS)
