@@ -6,6 +6,7 @@ MKISOFS = mkisofs
 ASMSRCS = boot.asm kernel.asm
 ASMOBJS = $(ASMSRCS:.asm=.bin)
 ASMDEPS = $(ASMSRCS:.asm=.dep)
+ASMLISTS = $(ASMSRCS:.asm=.list)
 
 ISONAME = os.iso
 
@@ -22,7 +23,7 @@ $(ISONAME): $(ASMOBJS) Makefile
 
 .PHONY: clean
 clean:
-	rm -rf $(ASMOBJS) cd-root
+	rm -rf $(ASMOBJS) $(ASMDEPS) $(ASMLISTS) cd-root
 
 .PHONY: distclean
 distclean: clean
