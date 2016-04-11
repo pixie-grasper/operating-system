@@ -4,10 +4,16 @@
 
 entry:
   mov rsp, 0x00080000
-  mov rsi, okmsg
+  call memory.init
+  jc error.notenoughmemory
+  mov rsi, msg.ok
   call console_out.prints
-  mov rax, 0xDEADBEEFFEE1BADD
-  call console_out.printx
+  jmp end
+
+error:
+.notenoughmemory:
+  mov rsi, msg.nem
+  call console_out.prints
   jmp end
 
 end:
@@ -15,6 +21,8 @@ end:
   jmp end
 
 %include "console-out.asm"
+%include "memory.asm"
 
-okmsg: db 'Hello.', 0
-
+msg:
+.ok: db 'OK.', 0
+.nem: db 'Memory: ', 0
