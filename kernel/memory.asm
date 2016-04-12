@@ -10,25 +10,26 @@ memory:
   mov rdi, .initialized
   call atomic.trylock
   jc return.false
+  ; check size of the installed memory
+  call .calcsize
+  ; if memory not enough, return
+  cmp rdi, 2 * 1024 * 1024
+  jb return.false
+  ; initialize memory map
+  call .initmap
+  jmp return.true
+
+  ; out: di = memory size
+.calcsize:
   ; first, disable caching
   mov rax, cr0
   push rax
   or rax, 0x60000000  ; set CD, NW
   mov cr0, rax
-  ; then, get size of the installed memory
-  call .calcsize
-  ; then, enable caching
-  pop rax
-  mov cr0, rax
-  ; if memory not enough, return
-  call .getsize
-  cmp rax, 2 * 1024 * 1024
-  jb return.false
-  jmp return.true
-
-.calcsize:
+  ; then, check installed
   mov rax, 1 << 36  ; 64 GiB
   mov rsi, rax
+  mov rdi, rax
   call .check
   jnc .calcsize.3
   xor rdi, rdi
@@ -47,7 +48,55 @@ memory:
   mov rsi, rax
   jmp .calcsize.1
 .calcsize.3:
+  ; enable caching
+  pop rax
+  mov cr0, rax
+  ; save memory size
   mov [.size], rdi
+  ret
+
+  ; map begins 0x00100000
+  ; note:
+  ;   memory size >= 0x00200000
+  ;   0x00100000--0x0010001f: free space
+  ;   0x00100020--0x00100000 + .size / (4096 * 8): memory management area
+  ; in the area, page id = (addr - 0x00100000) * 8 + bit pos [addr]
+  ; page address = id * 4096
+  ; in: di = memory size
+.initmap:
+  mov rcx, rdi
+  shr rcx, 12 + 3 + 2  ; 1 page 4 KiB per 1 bit = 128 KiB per 1 DWord
+  mov edi, 0x00100000
+  mov esi, edi
+  xor edx, edx
+.initmap.1:
+  mov [edi], edx
+  add edi, 4
+  dec ecx
+  jnz .initmap.1
+  ; map ends edi. set fill flag.
+  shr edi, 12
+  mov eax, edi
+  and eax, 0x07
+  shr edi, 3
+  add edi, esi
+  not edx
+.initmap.2:
+  mov [esi], edx
+  add esi, 4
+  cmp esi, edi
+  jb .initmap.2
+  mov ecx, edx
+  test eax, eax
+  jz .initmap.4
+.initmap.3:
+  shl ecx, 1
+  dec eax
+  jz .initmap.4
+  jmp .initmap.3
+.initmap.4:
+  not ecx
+  mov [esi], ecx
   ret
 
   ; in: a = assuming size of installed memory
@@ -66,6 +115,50 @@ memory:
 .getsize:
   mov rax, [.size]
   ret
+
+  ; in: LTS:[0..3] = address in the table that has free page
+  ; out: a = page address
+  ; out: LTS:[4..7] = new page id
+.newpage:
+  xor rax, rax
+  mov edi, [fs:0]
+  mov esi, edi
+.newpage.2:
+  ; try to set a bit
+  mov eax, [edi]
+  mov edx, eax
+  inc edx
+  jz .newpage.3
+  or edx, eax
+  lock cmpxchg [edi], edx
+  jnz .newpage.2
+  ; then, get bit's position
+  xor eax, edx
+  mov edx, eax
+  neg edx
+  and edx, eax
+  dec edx
+  popcnt eax, edx
+  ; then, get page address
+  mov edx, edi
+  sub edx, 0x00100000  ; least 2 bits are cleared
+  shl edx, 3  ; make least 5 bits are cleard
+  add eax, edx  ; calc the id,
+  mov [fs:4], eax
+  mov [fs:0], edi
+  shl rax, 12  ; and calc the address
+  ret
+.newpage.3:
+  add edi, 4
+  cmp esi, edi
+  je return.false
+  call .getsize
+  shr rax, 12 + 3
+  add eax, 0x00100000
+  cmp edi, eax
+  jb .newpage.2
+  mov edi, 0x00100020
+  jmp .newpage.2
 
 .size: dq 0
 .initialized: dd 0

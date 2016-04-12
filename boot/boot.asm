@@ -474,9 +474,10 @@ enter_ia32e_mode:
   mov ax, DataSelector64
   mov ds, ax
   mov es, ax
+  mov ss, ax
+  xor ax, ax  ; null selector
   mov fs, ax
   mov gs, ax
-  mov ss, ax
   jmp CodeSelector64:0x2000
 
 int13h42hpacket:

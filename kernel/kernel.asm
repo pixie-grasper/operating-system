@@ -1,6 +1,5 @@
   section .text vstart=0x2000
   bits 64
-  cpu x64
 
 entry:
   mov rsp, 0x00080000

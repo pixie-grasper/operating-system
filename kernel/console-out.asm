@@ -26,6 +26,7 @@ console_out:
 .printdot@s:
   push rdi
   push rax
+  push rdx
   mov rdi, .lock
   call atomic.lock
   mov rax, [.current_pos]
@@ -33,6 +34,7 @@ console_out:
   add rax, 2
   mov [.current_pos], rax
   call atomic.unlock
+  pop rdx
   pop rax
   pop rdi
   ret
@@ -108,6 +110,20 @@ console_out:
   jnz .printx.1
   mov [.current_pos], rsi
   call atomic.unlock
+  ret
+
+.printx@s:
+  push rax
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  call .printx
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rax
   ret
 
 .current_pos: dq 0x000b8000
