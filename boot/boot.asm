@@ -524,7 +524,21 @@ gdtr32:
 gdtbegin:
   dq 0  ; null selector
 
-CodeSelector32 equ 1 * 8
+CodeSelector64 equ 1 * 8
+  dd 0x00000000
+  db 0x00
+  db 0x9a
+  db 0x20
+  db 0x00
+
+DataSelector64 equ 2 * 8
+  dd 0x00000000
+  db 0x00
+  db 0x92
+  db 0x00
+  db 0x00
+
+CodeSelector32 equ 3 * 8
   dw 0xffff  ; Segment limit 15:0
   dw 0x0800  ; Base address 15:0
   db 0x00    ; Base 23:16
@@ -533,25 +547,11 @@ CodeSelector32 equ 1 * 8
              ; 3:0 = Segment limit 19:16
   db 0x00    ; Base address 31:24
 
-DataSelector32 equ 2 * 8
+DataSelector32 equ 4 * 8
   dw 0xffff
   dw 0x0000
   db 0x00
   db 0x92
   db 0xcf
-  db 0x00
-
-CodeSelector64 equ 3 * 8
-  dd 0x00000000
-  db 0x00
-  db 0x9a
-  db 0xa0
-  db 0x00
-
-DataSelector64 equ 4 * 8
-  dd 0x00000000
-  db 0x00
-  db 0x92
-  db 0xa0
   db 0x00
 gdtend:
