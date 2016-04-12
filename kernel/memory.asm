@@ -75,7 +75,10 @@ memory:
   dec ecx
   jnz .initmap.1
   ; map ends edi. set fill flag.
+  ; Incidentally, allocate sequencial buffer for the kernel
+  mov [global_page_addr], edi
   shr edi, 12
+  add edi, global_page_size  ; number of allocate pages
   mov eax, edi
   and eax, 0x07
   shr edi, 3

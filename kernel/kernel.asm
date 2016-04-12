@@ -24,4 +24,7 @@ end:
 
 msg:
 .ok: db 'OK.', 0
-.nem: db 'Memory: ', 0
+.nem: db 'Not enough memory.', 0
+
+global_page_size equ 1
+global_page_addr: dd 0
