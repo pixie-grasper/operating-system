@@ -23,6 +23,20 @@ console_out:
   call atomic.unlock
   ret
 
+.printdot@s:
+  push rdi
+  push rax
+  mov rdi, .lock
+  call atomic.lock
+  mov rax, [.current_pos]
+  mov word [rax], 0x072e
+  add rax, 2
+  mov [.current_pos], rax
+  call atomic.unlock
+  pop rax
+  pop rdi
+  ret
+
   ; in: a = signed integer
 .printi:
   xor rdx, rdx
