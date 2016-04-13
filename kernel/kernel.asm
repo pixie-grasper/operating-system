@@ -6,6 +6,7 @@ entry:
   call memory.init
   jc error.notenoughmemory
   call descriptor_tables.init
+  call interrupts.init
   mov rsi, msg.ok
   call console_out.prints
   jmp end
@@ -34,6 +35,6 @@ msg:
 .bad: db 'bad.', 0
 .nem: db 'Not enough memory.', 0
 
-; one page for the GDT, one for the TLS
-global_page_size equ 2
+; one page for the GDT, one for the IDT, one for the TLS
+global_page_size equ 3
 global_page_addr: dd 0
