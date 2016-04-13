@@ -10,7 +10,6 @@ console_out:
   call .cursor.set
   ; clear screen
   mov eax, 0x07200720
-  mov edi, 0x000b8000
   mov ecx, 80 * 25 * 2 / 4
 .init.1:
   mov [edi], eax
@@ -207,6 +206,18 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
+  ret
+
+.printi@s:
+  push rax
+  push rcx
+  push rdx
+  push rdi
+  call .printi
+  pop rdi
+  pop rdx
+  pop rcx
+  pop rax
   ret
 
   ; in: a = bit stream
