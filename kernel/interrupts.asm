@@ -26,11 +26,11 @@ interrupts:
   dd 0x00eb00eb
   out 0xa1, al
   dd 0x00eb00eb
-  ; disable pic
+  ; disable pic without timer
   mov al, 0xff
   out 0xa1, al
   dd 0x00eb00eb
-  mov al, 0xfb
+  mov al, 0xfa
   out 0x21, al
   dd 0x00eb00eb
   ; enable interrupt
@@ -69,7 +69,26 @@ interrupts:
 .handler_1D:
 .handler_1E:
 .handler_1F:
-.handler_20:
+  iretq
+
+.handler_20:  ; timer
+  pushfq
+  push rax
+  mov ax, ds
+  push rax
+  mov ax, 1 * 8
+  mov ds, ax
+  mov al, 0x20
+  out 0x20, al
+  inc qword [.timer.count]
+  pop rax
+  mov ds, ax
+  pop rax
+  popfq
+  iretq
+
+.timer.count dq 0
+
 .handler_21:
 .handler_22:
 .handler_23:
@@ -293,7 +312,7 @@ interrupts:
 .handler_FD:
 .handler_FE:
 .handler_FF:
-  iret
+  iretq
 
 .addresslist:
   dd .handler_00, .handler_01, .handler_02, .handler_03, .handler_04, .handler_05, .handler_06, .handler_07
