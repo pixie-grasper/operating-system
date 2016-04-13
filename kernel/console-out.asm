@@ -74,6 +74,11 @@ console_out:
   inc rsi
   jmp .prints.1
 .prints.2:
+  cmp edi, 0x000b8000 + 80 * 25 * 2
+  jb .prints.3
+  call .scroll
+  jmp .prints.2
+.prints.3:
   mov [.current.pos], edi
   mov eax, edi
   sub eax, 0x000b8000
@@ -92,10 +97,8 @@ console_out:
   xor edx, edx
   mov ecx, 80 * 2
   div ecx
-  inc eax
-  mul ecx
-  mov edi, eax
-  add edi, 0x000b8000
+  sub edi, edx
+  add edi, 80 * 2
   pop rax
   inc rsi
   jmp .prints.1
@@ -106,9 +109,7 @@ console_out:
   xor edx, edx
   mov ecx, 80 * 2
   div ecx
-  mul ecx
-  mov edi, eax
-  add edi, 0x000b8000
+  sub edi, edx
   pop rax
   inc rsi
   jmp .prints.1
@@ -128,6 +129,13 @@ console_out:
   add edi, 4
   dec ecx
   jnz .scroll.1
+  mov eax, 0x07200720
+  mov ecx, 80 * 2 / 4
+.scroll.2:
+  mov [edi], eax
+  add edi, 4
+  dec ecx
+  jnz .scroll.2
   pop rdi
   pop rsi
   pop rcx
