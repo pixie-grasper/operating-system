@@ -6,7 +6,7 @@
 console_out:
 .init:
   ; set cursor to left-top corner
-  xor ecx, ecx
+  mov edi, 0x000b8000
   call .cursor.set
   ; clear screen
   mov eax, 0x07200720
@@ -20,7 +20,9 @@ console_out:
   ret
 
 .cursor.set:
-  mov ecx, eax
+  mov ecx, edi
+  sub ecx, 0x000b8000
+  shr ecx, 1
   mov dx, 0x03d4
   mov al, 0x0e
   out dx, al
@@ -80,9 +82,6 @@ console_out:
   jmp .prints.2
 .prints.3:
   mov [.current.pos], edi
-  mov eax, edi
-  sub eax, 0x000b8000
-  shr eax, 1
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
@@ -144,19 +143,27 @@ console_out:
   ret
 
 .printdot@s:
-  push rdi
   push rax
+  push rcx
   push rdx
+  push rdi
   mov rdi, .lock
   call atomic.lock
-  mov rax, [.current.pos]
-  mov word [rax], 0x072e
-  add rax, 2
-  mov [.current.pos], rax
+  mov edi, [.current.pos]
+  mov word [edi], 0x072e
+  add edi, 2
+  cmp edi, 0x000b8000 + 80 * 25 * 2
+  jb .printdot@s.1
+  call .scroll
+.printdot@s.1:
+  mov [.current.pos], edi
+  call .cursor.set
+  mov rdi, .lock
   call atomic.unlock
-  pop rdx
-  pop rax
   pop rdi
+  pop rdx
+  pop rcx
+  pop rax
   ret
 
   ; in: a = signed integer
@@ -184,16 +191,21 @@ console_out:
 .printi.3:
   mov rdi, .lock
   call atomic.lock
-  mov rdx, [.current.pos]
+  mov edi, [.current.pos]
 .printi.4:
   pop rax
   test eax, eax
   jz .printi.5
-  mov [rdx], ax
-  add rdx, 2
+  mov [edi], ax
+  add edi, 2
+  cmp edi, 0x000b8000 + 80 * 25 * 2
+  jb .printi.4
+  call .scroll
   jmp .printi.4
 .printi.5:
-  mov [.current.pos], rdx
+  mov [.current.pos], edi
+  call .cursor.set
+  mov rdi, .lock
   call atomic.unlock
   ret
 
@@ -212,7 +224,7 @@ console_out:
   mov ecx, 16
   mov rdi, .lock
   call atomic.lock
-  mov rsi, [.current.pos]
+  mov edi, [.current.pos]
   mov ah, 0x07
   pop rdx
 .printx.1:
@@ -223,12 +235,14 @@ console_out:
   jbe .printx.2
   add al, 0x07
 .printx.2:
-  mov [rsi], ax
-  add rsi, 2
+  mov [edi], ax
+  add edi, 2
   shr rdx, 4
   dec ecx
   jnz .printx.1
-  mov [.current.pos], rsi
+  mov [.current.pos], edi
+  call .cursor.set
+  mov rdi, .lock
   call atomic.unlock
   ret
 
@@ -246,7 +260,7 @@ console_out:
   pop rax
   ret
 
-.current.pos: dq 0x000b8000
+.current.pos: dd 0x000b8000
 .lock: dd 0
 
 %endif  ; CONSOLE_OUT_ASM_
