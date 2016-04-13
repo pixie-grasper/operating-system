@@ -119,12 +119,10 @@ memory:
   mov rax, [.size]
   ret
 
-  ; in: LTS:[0..3] = address in the table that has free page
   ; out: a = page address
-  ; out: LTS:[4..7] = new page id
 .newpage:
   xor rax, rax
-  mov edi, [fs:0]
+  mov edi, [fs:TLS.memory.tablelookahead]
   mov esi, edi
 .newpage.2:
   ; try to set a bit
@@ -143,12 +141,10 @@ memory:
   dec edx
   popcnt eax, edx
   ; then, get page address
-  mov edx, edi
-  sub edx, 0x00100000  ; least 2 bits are cleared
-  shl edx, 3  ; make least 5 bits are cleard
-  add eax, edx  ; calc the id,
-  mov [fs:4], eax
-  mov [fs:0], edi
+  mov [fs:TLS.memory.tablelookahead], edi
+  sub edi, 0x00100000  ; least 2 bits are cleared
+  shl edi, 3  ; make least 5 bits are cleard
+  add eax, edi  ; calc the id,
   shl rax, 12  ; and calc the address
   ret
 .newpage.3:
