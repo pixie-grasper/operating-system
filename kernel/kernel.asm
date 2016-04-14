@@ -7,6 +7,8 @@ entry:
   jc error.notenoughmemory
   call descriptor_tables.init
   call console_out.init
+  mov rsi, msg.initializing
+  call console_out.prints
   call interrupts.init
   mov rsi, msg.ok
   call console_out.prints
@@ -32,6 +34,7 @@ end:
 %include "descriptor-tables.asm"
 
 msg:
+.initializing: db 'Initializing... ', 0
 .ok: db 'OK.', 0x0a, 0
 .bad: db 'bad.', 0
 .nem: db 'Not enough memory.', 0

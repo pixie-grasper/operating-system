@@ -63,8 +63,8 @@ descriptor_tables:
   dw 4095
   dq 0
 
-.GDT equ 0
-.LDT equ 4096
-.TLS equ 8192
+.GDT equ 4096 * 0
+.LDT equ 4096 * 1
+.TLS equ 4096 * 2
 
 %endif  ; DESCRIPTOR_TABLES_ASM_
