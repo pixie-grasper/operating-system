@@ -56,10 +56,12 @@ ata:
   jc return.false
   call memory.newpage@s
   push rax
+  push rdi
   mov rdi, rax
   mov edx, ebx
   mov ecx, 256
   rep insw
+  pop rdi
   pop rax
   call memory.disposepage@s
   mov byte [edi], 3
