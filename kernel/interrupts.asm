@@ -3,7 +3,7 @@
 
 interrupts:
 .init:
-  ; configure pic
+  ; configure PIC
   mov al, 0x11  ; configure start
   out 0x20, al
   dd 0x00eb00eb
@@ -26,7 +26,18 @@ interrupts:
   dd 0x00eb00eb
   out 0xa1, al
   dd 0x00eb00eb
-  ; disable pic without timer
+  ; configure PIT
+  mov al, 0x34  ; 00-11-010-0; channel 0, lh access mode, operating mode 2, binary mode
+  out 0x43, al
+  dd 0x00eb00eb
+  ; 1193182 / 19886 Hz ~ 60 Hz, 19886 = 0x4dae
+  mov al, 0xae
+  out 0x40, al
+  dd 0x00eb00eb
+  mov al, 0x4d
+  out 0x40, al
+  dd 0x00eb00eb
+  ; disable PIC without timer
   mov al, 0xff
   out 0xa1, al
   dd 0x00eb00eb
