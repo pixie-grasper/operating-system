@@ -159,6 +159,16 @@ memory:
   mov edi, 0x00100020
   jmp .newpage.2
 
+.newpage@s:
+  push rdx
+  push rsi
+  push rdi
+  call .newpage
+  pop rdi
+  pop rsi
+  pop rdx
+  ret
+
   ; in: a = page address
 .disposepage:
   shr rax, 12
@@ -177,6 +187,16 @@ memory:
   and ecx, edx
   lock cmpxchg [edi], ecx
   jnz .disposepage.1
+  ret
+
+.disposepage@s:
+  push rcx
+  push rdx
+  push rdi
+  call .disposepage
+  pop rdi
+  pop rdx
+  pop rcx
   ret
 
 .size: dq 0
