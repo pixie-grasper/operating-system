@@ -10,6 +10,7 @@ entry:
   mov rsi, msg.initializing
   call console_out.prints
   call interrupts.init
+  call ata.init
   mov rsi, msg.ok
   call console_out.prints
   jmp end
@@ -29,14 +30,15 @@ end:
   hlt
   jmp end
 
+%include "ata.asm"
 %include "console-out.asm"
-%include "memory.asm"
 %include "descriptor-tables.asm"
+%include "memory.asm"
 
 msg:
 .initializing: db 'Initializing... ', 0
 .ok: db 'OK.', 0x0a, 0
-.bad: db 'bad.', 0
+.bad: db 'Failed.', 0
 .nem: db 'Not enough memory.', 0
 
 ; one page for the GDT, one for the IDT, one for the TLS

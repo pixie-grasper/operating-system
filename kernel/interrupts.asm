@@ -48,6 +48,12 @@ interrupts:
   sti
   ret
 
+.enable.ata:
+  in al, 0xa1
+  and al, 0x3f
+  out 0xa1, al
+  ret
+
 .handler_00:
 .handler_01:
 .handler_02:
