@@ -159,6 +159,26 @@ memory:
   mov edi, 0x00100020
   jmp .newpage.2
 
+  ; in: a = page address
+.disposepage:
+  shr rax, 12
+  mov edi, eax
+  mov ecx, eax
+  shr edi, 3
+  and edi, ~0x03
+  add edi, 0x00100000
+  and ecx, 0x1f
+  mov edx, 1
+  shl edx, cl
+  not edx
+.disposepage.1:
+  mov eax, [edi]
+  mov ecx, eax
+  and ecx, edx
+  lock cmpxchg [edi], ecx
+  jnz .disposepage.1
+  ret
+
 .size: dq 0
 .initialized: dd 0
 %endif
