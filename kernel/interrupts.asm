@@ -119,8 +119,19 @@ interrupts:
 .handler_2B:
 .handler_2C:
 .handler_2D:
+  iretq
+
 .handler_2E:
 .handler_2F:
+  pushfq
+  push rax
+  mov al, 0x20
+  out 0x20, al
+  out 0xa0, al
+  pop rax
+  popfq
+  iretq
+
 .handler_30:
 .handler_31:
 .handler_32:
