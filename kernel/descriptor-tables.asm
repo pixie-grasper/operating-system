@@ -33,7 +33,7 @@ descriptor_tables:
   mov ax, 3 * 8
   mov fs, ax
   mov gs, ax
-  mov dword [esi + .TLS], 0x00100020
+  mov dword [esi + .TLS + TLS.memory.tablelookahead], 0x00100020
   ; make idt
   lea edi, [esi + .LDT]
   mov esi, interrupts.addresslist
