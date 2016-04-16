@@ -114,6 +114,12 @@ before_load_sections:
   xor eax, eax
   mov [loaded_segment_info], eax
   mov [loaded_segment_info + 4], eax
+  mov ah, 0x41
+  mov dl, [drive_number]
+  mov bx, 0x55aa
+  int 0x13
+  cmp bx, 0xaa55
+  jne failed_drive
 load_sections:
   mov ah, 0x42
   mov dl, [drive_number]
@@ -347,6 +353,11 @@ failed:
   call print
   jmp end
 
+failed_drive:
+  mov si, baddrive
+  call print
+  jmp end
+
 failed_too_big_table:
   mov si, toobigptmsg
   call print
@@ -490,6 +501,7 @@ int13h42hpacket:
 
 okmsg db 'ok.', 0x00
 badmsg db 'failed.', 0x00
+baddrive db 'BIOS Extension not found.', 0x00
 toobigptmsg db 'system error: too big directory.', 0x00
 badcpu db 'BAD CPU.', 0
 kernel_name db 0x04, 'BOOT', 0x00, 0x0c, 'KERNEL.BIN', 0x3b, 0x31, 0x00, 0x00
