@@ -78,7 +78,7 @@ ata:
   jmp return.false
 
 .select.cd:
-  mov ebx, .vtable
+  mov ebx, .vtable.atapi
   mov edi, .info0
   mov eax, [edi]
   test eax, 2
@@ -221,7 +221,7 @@ ata:
   dd 0x0170
 
   align 8
-.vtable:
+.vtable.atapi:
   dq .readsector
 
 %endif  ; ATA_ASM_
