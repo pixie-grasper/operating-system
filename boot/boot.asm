@@ -1,6 +1,7 @@
   ; ds
   section .bss vstart=0x0000
   org 0x0000
+boot_from resw 1  ; 1 = HDD, 2 = CD/DVD
 a20_check_buffer resw 1
 graphics_current_pos resw 1
 drive_number resb 1
@@ -33,6 +34,7 @@ init:
   mov gs, ax
   xor ax, ax
   mov sp, ax
+  mov word [ds:boot_from], 2
   mov [ds:graphics_current_pos], ax
   mov [ds:drive_number], dl
   cld
@@ -371,11 +373,14 @@ check_a20:
   ; ds = 0x0080
   ; fs = 0xffff
   mov di, 0x0810
+  mov si, 0x0000
   mov dx, [fs:di]
+  mov cx, [ds:si]
   mov word [fs:di], 0xffff
-  mov word [ds:0x0000], 0x0000
+  mov word [ds:si], 0x0000
   mov ax, [fs:di]
   mov [fs:di], dx
+  mov [ds:si], cx
   test ax, ax
   jnz true
   jmp false

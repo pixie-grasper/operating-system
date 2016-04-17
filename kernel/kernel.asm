@@ -15,7 +15,7 @@ entry:
   call console_out.prints
   mov rsi, msg.disc
   call console_out.prints
-  call ata.select.cd
+  call ata.select.boot
   jc error.failed
   call memory.newpage@s
   push rax

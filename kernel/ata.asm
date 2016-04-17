@@ -71,6 +71,12 @@ ata:
   mov byte [edi], 1
   ret
 
+.select.boot:
+  mov ax, [0x0800]
+  cmp ax, 2
+  je .select.cd
+  jmp return.false
+
 .select.cd:
   mov ebx, .vtable
   mov edi, .info0
