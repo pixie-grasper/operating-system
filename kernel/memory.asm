@@ -134,12 +134,9 @@ memory:
   lock cmpxchg [edi], edx
   jnz .newpage.2
   ; then, get bit's position
-  xor eax, edx
-  mov edx, eax
-  neg edx
-  and edx, eax
-  dec edx
-  popcnt eax, edx
+  xor eax, edx  ; only single bit on
+  dec eax
+  popcnt eax, eax
   ; then, get page address
   mov [fs:TLS.memory.tablelookahead], edi
   sub edi, 0x00100000  ; least 2 bits are cleared
