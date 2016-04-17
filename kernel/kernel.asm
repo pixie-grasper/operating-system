@@ -10,6 +10,7 @@ entry:
   mov rsi, msg.initializing
   call console_out.prints
   call interrupts.init
+  call objects.init
   call ata.init
   mov rsi, msg.ok
   call console_out.prints
@@ -46,6 +47,7 @@ end:
 %include "console-out.asm"
 %include "descriptor-tables.asm"
 %include "memory.asm"
+%include "objects.asm"
 
 msg:
 .initializing: db 'Initializing... ', 0
@@ -60,3 +62,4 @@ global_page_addr: dd 0
 
 TLS:
 .memory.tablelookahead equ 0  ; .. 3
+.objects.heap equ 8  ; .. 15
