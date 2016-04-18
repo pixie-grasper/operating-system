@@ -19,7 +19,7 @@ $(ISONAME): $(ASMOBJS) Makefile
 	$(MKISOFS) -b boot/boot.bin -hide boot.catalog -no-pad -input-charset iso8859-1 -no-emul-boot -boot-load-seg 0x07c0 -boot-load-size 4 -o $@ cd-root
 
 %.bin: %.asm Makefile
-	$(NASM) -f bin $< -o $@ -l $*.list -MD $*.dep -i kernel/
+	$(NASM) -f bin $< -o $@ -l $*.list -MD $*.dep -i kernel/ -w+all -w+error
 
 .PHONY: clean
 clean:
