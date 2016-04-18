@@ -19,6 +19,8 @@ endstruc
 %define object.system 0
 %define object.integer 1
 
+%include "integer.asm"
+
 objects:
 .init:
   xor rax, rax
@@ -101,6 +103,63 @@ objects:
   jne .new.chunk.2
   call .newheap
   jmp .new.chunk.1
+
+.new.integer:
+  call .new.chunk
+  call .ref.init
+  mov byte [rax + object.class], object.integer
+  ret
+
+.ref.init:
+  mov dword [rax + object.refcount], 1
+  ret
+
+.ref:
+  inc dword [rax + object.refcount]
+  ret
+
+.unref:
+  dec dword [rax + object.refcount]
+  jnz .unref.2
+  push rdx
+  mov dl, [rax + object.class]
+  cmp dl, object.integer
+  je .unref.integer
+.unref.1:
+  call .dispose
+  pop rdx
+.unref.2:
+  ret
+.unref.integer:
+  call integer.dispose
+  jmp .unref.1
+
+.dispose:
+  push rcx
+  push rdx
+  push rdi
+  mov rdi, rax
+  mov rcx, rax
+  and rdi, ~0x0fff
+  and rax, 0x0e00
+  shr rax, 9 - 2
+  add rdi, rax
+  and rcx, 0x01f0
+  shr rcx, 4
+  mov eax, 1
+  shl eax, cl
+  mov ecx, eax
+  not ecx
+.dispose.1:
+  mov eax, [rdi]
+  mov edx, eax
+  and edx, ecx
+  lock cmpxchg [rdi], edx
+  jnz .dispose.1
+  pop rdi
+  pop rdx
+  pop rcx
+  ret
 
 ; note:
 ;   64 GiB / 16 byte = 2^32,
