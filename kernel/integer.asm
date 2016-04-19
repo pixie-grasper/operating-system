@@ -3,15 +3,18 @@
 
 integer:
 .new:
-  push rdx
-  push rax
   call objects.new.integer
-  pop rdx
-  mov [rax + object.content], rdx
-  pop rdx
   ret
 
 .dispose:
+  ret
+
+.get:
+  mov rdx, [rax + object.content]
+  ret
+
+.set:
+  mov [rax + object.content], rdx
   ret
 
 %endif  ; INTEGER_ASM_
