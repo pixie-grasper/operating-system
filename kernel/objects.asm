@@ -104,10 +104,9 @@ objects:
   call .newheap
   jmp .new.chunk.1
 
-.new.integer:
+.new:
   call .new.chunk
   call .ref.init
-  mov byte [rax + object.class], object.integer
   ret
 
 .ref.init:
@@ -159,6 +158,36 @@ objects:
   pop rdi
   pop rdx
   pop rcx
+  ret
+
+  ; compare a < b, return it.
+  ; note: nil or false < any (without nil or false).
+  ; in: a = address of object 1
+  ; in: b = address of object 2
+.lt:
+  test rdx, rdx
+  jz .new.false
+  test rax, rax
+  jz .new.true
+  push rcx
+  mov cl, [rax + object.class]
+  cmp cl, [rdx + object.class]
+  pop rcx
+  ja .new.false
+  jb .new.true
+  push rcx
+  mov cl, [rax + object.class]
+  cmp cl, object.system
+  je .lt.system
+  cmp cl, object.integer
+  je .lt.integer
+.lt.system:
+  pop rcx
+  call integer.lt  ; TODO: compare the system objects exactly
+  ret
+.lt.integer:
+  pop rcx
+  call integer.lt
   ret
 
 ; note:
