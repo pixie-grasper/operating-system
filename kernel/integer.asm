@@ -2,9 +2,15 @@
 %define INTEGER_ASM_
 
 integer:
+  ; out: a = object id
 .new:
   call objects.new
-  mov byte [rax + object.class], object.integer
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  mov byte [rdx + object.class], object.integer
+  pop rdx
   ret
 
 .dispose:
