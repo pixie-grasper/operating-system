@@ -113,25 +113,50 @@ objects:
   mov dword [rax + object.refcount], 1
   ret
 
+  ; in: a = object id
 .ref:
-  inc dword [rax + object.refcount]
+  push rcx
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+.ref.1:
+  mov eax, [rdx + object.refcount]
+  mov ecx, eax
+  inc ecx
+  lock cmpxchg [rdx + object.refcount], ecx
+  jnz .ref.1
+  pop rcx
+  pop rdx
   ret
 
+  ; in: a = object id
 .unref:
-  dec dword [rax + object.refcount]
-  jnz .unref.2
+  push rcx
   push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+.unref.1:
+  mov eax, [rdx + object.refcount]
+  mov ecx, eax
+  dec ecx
+  lock cmpxchg [rdx + object.refcount], ecx
+  jnz .unref.1
+  test ecx, ecx
+  jnz .unref.3
   mov dl, [rax + object.class]
   cmp dl, object.integer
   je .unref.integer
-.unref.1:
-  call .dispose
-  pop rdx
 .unref.2:
+  call .dispose
+.unref.3:
+  pop rdx
+  pop rcx
   ret
 .unref.integer:
   call integer.dispose
-  jmp .unref.1
+  jmp .unref.2
 
 .dispose:
   push rcx
@@ -188,17 +213,6 @@ objects:
 .lt.integer:
   pop rcx
   call integer.lt
-  ret
-
-; note:
-;   64 GiB / 16 byte = 2^32,
-;   object-id : 32 bits = address-to-the-object >> 4
-.id.to.addr:
-  shl rax, 4
-  ret
-
-.addr.to.id:
-  shr rax, 4
   ret
 
 .isfalse:
