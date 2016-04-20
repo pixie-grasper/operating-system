@@ -2,7 +2,7 @@
 %define INTEGER_ASM_
 
 integer:
-  ; out: a = object id
+  ; out: a = integer id
 .new:
   call objects.new.raw
   mov byte [rax + object.class], object.integer
