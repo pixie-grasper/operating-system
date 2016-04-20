@@ -8,13 +8,9 @@
 stack:
   ; out: a = stack id
 .new:
-  push rdx
   call objects.new.raw
   mov byte [rax + object.class], object.stack
-  xor rdx, rdx
-  mov [rax + object.content], rdx
   shr rax, 4
-  pop rdx
   ret
 
   ; in: a = stack address
