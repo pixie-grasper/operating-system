@@ -99,6 +99,12 @@ objects:
   shr rax, 4
   ret
 
+  ; out: a = object address
+.new.raw:
+  call .new.chunk
+  call .ref.init
+  ret
+
 .ref.init:
   mov dword [rax + object.refcount], 1
   ret
@@ -140,30 +146,28 @@ objects:
   jnz .unref.1
   test ecx, ecx
   jnz .unref.3
-  mov dl, [rax + object.class]
+  mov rax, rdx
+  mov dl, [rdx + object.class]
   cmp dl, object.integer
   je .unref.integer
 .unref.2:
-  call .dispose
+  call .dispose.raw
 .unref.3:
   pop rdx
   pop rcx
 .unref.4:
   ret
 .unref.integer:
-  call integer.dispose
+  call integer.dispose.raw
   jmp .unref.2
 
-  ; in: a = object id
-.dispose:
+  ; in: a = object address
+.dispose.raw:
   push rcx
   push rdx
   push rdi
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  mov rdi, rdx
-  mov rcx, rdx
+  mov rdi, rax
+  mov rcx, rax
   and rdi, ~0x0fff
   and rax, 0x0e00
   shr rax, 9 - 2
@@ -174,12 +178,12 @@ objects:
   shl eax, cl
   mov ecx, eax
   not ecx
-.dispose.1:
+.dispose.raw.1:
   mov eax, [rdi]
   mov edx, eax
   and edx, ecx
   lock cmpxchg [rdi], edx
-  jnz .dispose.1
+  jnz .dispose.raw.1
   pop rdi
   pop rdx
   pop rcx

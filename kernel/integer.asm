@@ -4,16 +4,12 @@
 integer:
   ; out: a = object id
 .new:
-  call objects.new
-  push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  mov byte [rdx + object.class], object.integer
-  pop rdx
+  call objects.new.raw
+  mov byte [rax + object.class], object.integer
+  shr rax, 4
   ret
 
-.dispose:
+.dispose.raw:
   ret
 
   ; in: a = object id
