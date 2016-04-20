@@ -52,18 +52,6 @@ objects:
   pop rcx
   ret
 
-.new.nil:
-  xor rax, rax
-  ret
-
-.new.false:
-  xor rax, rax
-  ret
-
-.new.true:
-  or rax, -1
-  ret
-
   ; assume run on single-process per thread.
 .new.chunk:
   push rcx
@@ -104,9 +92,11 @@ objects:
   call .newheap
   jmp .new.chunk.1
 
+  ; out: a = object id
 .new:
   call .new.chunk
   call .ref.init
+  shr rax, 4
   ret
 
 .ref.init:
@@ -115,6 +105,8 @@ objects:
 
   ; in: a = object id
 .ref:
+  call .isbool
+  jnc .ref.2
   push rcx
   push rdx
   xor rdx, rdx
@@ -128,10 +120,13 @@ objects:
   jnz .ref.1
   pop rcx
   pop rdx
+.ref.2:
   ret
 
   ; in: a = object id
 .unref:
+  call .isbool
+  jnc .unref.4
   push rcx
   push rdx
   xor rdx, rdx
@@ -153,17 +148,22 @@ objects:
 .unref.3:
   pop rdx
   pop rcx
+.unref.4:
   ret
 .unref.integer:
   call integer.dispose
   jmp .unref.2
 
+  ; in: a = object id
 .dispose:
   push rcx
   push rdx
   push rdi
-  mov rdi, rax
-  mov rcx, rax
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  mov rdi, rdx
+  mov rcx, rdx
   and rdi, ~0x0fff
   and rax, 0x0e00
   shr rax, 9 - 2
@@ -187,37 +187,67 @@ objects:
 
   ; compare a < b, return it.
   ; note: nil or false < any (without nil or false).
-  ; in: a = address of object 1
-  ; in: b = address of object 2
+  ; in: a = object id 1
+  ; in: d = object id 2
+  ; out: a = boolean id
 .lt:
-  test rdx, rdx
+  test edx, edx
   jz .new.false
-  test rax, rax
+  test eax, eax
   jz .new.true
-  push rcx
-  mov cl, [rax + object.class]
-  cmp cl, [rdx + object.class]
-  pop rcx
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  mov rsi, rcx
+  xor rcx, rcx
+  mov ecx, edx
+  shl rcx, 4
+  mov rdi, rcx
+  mov cl, [rsi + object.class]
+  cmp cl, [rdi + object.class]
   ja .new.false
   jb .new.true
-  push rcx
-  mov cl, [rax + object.class]
   cmp cl, object.system
   je .lt.system
   cmp cl, object.integer
   je .lt.integer
 .lt.system:
-  pop rcx
-  call integer.lt  ; TODO: compare the system objects exactly
+  call integer.lt@s  ; TODO: compare the system objects exactly
   ret
 .lt.integer:
-  pop rcx
-  call integer.lt
+  call integer.lt@s
   ret
 
-.isfalse:
-  test rax, rax
-  jz .new.true
-  jmp .new.false
+.lt@s:
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  call .lt
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  ret
+
+.new.nil:
+  xor eax, eax
+  ret
+
+.new.false:
+  xor eax, eax
+  ret
+
+.new.true:
+  mov eax, 1
+  ret
+
+  ; in: a = object id
+.isbool:
+  test eax, eax
+  jz return.true
+  cmp eax, 1
+  jz return.true
+  jmp return.false
 
 %endif  ; OBJECTS_ASM_
