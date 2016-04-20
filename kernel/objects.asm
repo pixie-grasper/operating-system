@@ -2,24 +2,25 @@
 %define OBJECTS_ASM_
 
 struc object
-  .class resb 1
   .mark resb 1
+  .class resb 1
   .padding resb 2
   .refcount resd 1
   .content resd 2
 endstruc
 
 struc object.internal
-  .class resb 1
   .mark resb 1
-  .padding resb 2
+  .padding resb 3
   .content resd 3
 endstruc
 
 %define object.system 0
 %define object.integer 1
+%define object.stack 2
 
 %include "integer.asm"
+%include "stack.asm"
 
 objects:
 .init:
@@ -251,6 +252,11 @@ objects:
   test eax, eax
   jz return.true
   cmp eax, 1
+  jz return.true
+  jmp return.false
+
+.isfalse:
+  test eax, eax
   jz return.true
   jmp return.false
 
