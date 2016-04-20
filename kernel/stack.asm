@@ -33,9 +33,8 @@ stack:
   mov eax, [rdx + object.internal.content + 4]
   call objects.unref
 .dispose.raw.2:
-  xor rax, rax
-  mov eax, [rdx + object.internal.content + 8]
-  mov rcx, rax
+  xor rcx, rcx
+  mov ecx, [rdx + object.internal.content + 8]
   mov rax, rdx
   call objects.dispose.raw
   mov rdx, rcx
