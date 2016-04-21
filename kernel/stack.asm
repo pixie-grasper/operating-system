@@ -94,7 +94,7 @@ stack:
   test rdx, rdx
   jz .nth.3
   dec rdx
-  jz .nth.4
+  jz .nth.5
   test byte [rax + object.padding], 0x01
   jz .nth.2
   dec rdx
@@ -105,19 +105,24 @@ stack:
   mov rax, rcx
   jmp .nth.1
 .nth.3:
-  mov eax, [rax + object.content]
-  jmp .nth.6
-.nth.4:
   test byte [rax + object.padding], 0x01
-  jz .nth.5
-  mov eax, [rax + object.content + 4]
-  jmp .nth.6
+  jnz .nth.4
+  mov eax, [rax + object.internal.content]
+  jmp .nth.7
+.nth.4:
+  mov eax, [rax + object.internal.content + 4]
+  jmp .nth.7
 .nth.5:
+  test byte [rax + object.padding], 0x01
+  jz .nth.6
+  mov eax, [rax + object.internal.content]
+  jmp .nth.7
+.nth.6:
   xor rcx, rcx
   mov ecx, [rax + object.internal.content + 8]
   shl rcx, 4
-  mov eax, [rcx + object.content]
-.nth.6:
+  mov eax, [rcx + object.internal.content + 4]
+.nth.7:
   pop rdx
   pop rcx
   ret
