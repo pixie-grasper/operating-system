@@ -79,6 +79,50 @@ stack:
   ret
 
   ; in: a = stack id
+  ; in: d = n: integer; top = 0
+  ; out: a = n-th object id of the stack
+.nth:
+  push rcx
+  push rdx
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  xor rax, rax
+  mov eax, [rcx + object.content]
+  shl rax, 4
+.nth.1:
+  test rdx, rdx
+  jz .nth.3
+  dec rdx
+  jz .nth.4
+  test byte [rax + object.padding], 0x01
+  jz .nth.2
+  dec rdx
+.nth.2:
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content + 8]
+  shl rcx, 4
+  mov rax, rcx
+  jmp .nth.1
+.nth.3:
+  mov eax, [rax + object.content]
+  jmp .nth.6
+.nth.4:
+  test byte [rax + object.padding], 0x01
+  jz .nth.5
+  mov eax, [rax + object.content + 4]
+  jmp .nth.6
+.nth.5:
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content + 8]
+  shl rcx, 4
+  mov eax, [rcx + object.content]
+.nth.6:
+  pop rdx
+  pop rcx
+  ret
+
+  ; in: a = stack id
   ; in: d = object id that will be pushed
 .push:
   push rax
