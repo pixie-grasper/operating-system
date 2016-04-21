@@ -69,7 +69,7 @@ stack:
   mov eax, [rdx + object.content]
   shl rax, 4
   test byte [rax + object.padding], 0x01
-  jz .top.1
+  jnz .top.1
   mov eax, [rax + object.internal.content]
   jmp .top.2
 .top.1:
