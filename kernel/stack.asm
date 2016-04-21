@@ -184,17 +184,17 @@ stack:
   test byte [rax + object.padding], 0x01
   jnz .pop.1
   push rax
-  mov eax, [rax + object.content]
+  mov eax, [rax + object.internal.content]
   call objects.unref
   pop rax
   xor rsi, rsi
-  mov esi, [rax + object.content + 8]
+  mov esi, [rax + object.internal.content + 8]
   call objects.dispose.raw
   mov [rdx + object.content], esi
   jmp .pop.2
 .pop.1:
   mov byte [rax + object.padding], 0x00
-  mov eax, [rax + object.content + 4]
+  mov eax, [rax + object.internal.content + 4]
   call objects.unref
 .pop.2:
   pop rsi
