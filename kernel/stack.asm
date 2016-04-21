@@ -187,7 +187,6 @@ stack:
   mov eax, [rax + object.internal.content]
   call objects.unref
   pop rax
-  xor rsi, rsi
   mov esi, [rax + object.internal.content + 8]
   call objects.dispose.raw
   mov [rdx + object.content], esi
