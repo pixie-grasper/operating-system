@@ -41,6 +41,7 @@ stack:
   pop rcx
   ret
 
+  ; @const
   ; in: a = stack id
   ; out: a = true if the stack is empty
 .empty:
@@ -58,6 +59,7 @@ stack:
   call objects.new.true
   ret
 
+  ; @const
   ; in: a = stack id
   ; out: a = top object id of the stack
 .top:
@@ -78,6 +80,7 @@ stack:
   pop rdx
   ret
 
+  ; @const
   ; in: a = stack id
   ; in: d = n: integer; top = 0
   ; out: a = n-th object id of the stack
@@ -131,6 +134,16 @@ stack:
   ; in: d = object id that will be pushed
 .push:
   push rax
+  call .push.move
+  mov eax, edx
+  call objects.ref
+  pop rax
+  ret
+
+  ; in: a = stack id
+  ; in: d = object id that will be pushed
+.push.move:
+  push rax
   ; rdx not changed
   push rsi
   push rdi
@@ -140,21 +153,21 @@ stack:
   shl rdi, 4
   mov esi, [rdi + object.content]
   shl rsi, 4
-  jnz .push.1
+  jnz .push.move.1
   call objects.new.chunk
   mov byte [rax + object.padding], 0x00
   mov [rax + object.internal.content], edx
   mov [rax + object.internal.content + 4], rsi
   shr rax, 4
   mov [rdi + object.content], eax
-  jmp .push.3
-.push.1:
+  jmp .push.move.3
+.push.move.1:
   test byte [rsi + object.padding], 0x01
-  jnz .push.2
+  jnz .push.move.2
   mov byte [rsi + object.padding], 0x01
   mov [rsi + object.internal.content + 4], edx
-  jmp .push.3
-.push.2:
+  jmp .push.move.3
+.push.move.2:
   call objects.new.chunk
   shr rsi, 4
   mov byte [rax + object.padding], 0x00
@@ -162,9 +175,7 @@ stack:
   mov [rax + object.internal.content + 8], esi
   shr rax, 4
   mov [rdi + object.content], eax
-.push.3:
-  mov eax, edx
-  call objects.ref
+.push.move.3:
   pop rdi
   pop rsi
   pop rax
@@ -201,5 +212,31 @@ stack:
   pop rax
   ret
 
+  ; in: a = stack id
+  ; out: a = object id that was popped
+.pop.move:
+  push rdx
+  push rsi
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  xor rax, rax
+  mov eax, [rdx + object.content]
+  shl rax, 4
+  test byte [rax + object.padding], 0x01
+  jnz .pop.move.1
+  mov esi, [rax + object.internal.content + 8]
+  mov [rdx + object.content], esi
+  mov esi, [rax + object.internal.content]
+  call objects.dispose.raw
+  mov eax, esi
+  jmp .pop.move.2
+.pop.move.1:
+  mov byte [rax + object.padding], 0x00
+  mov eax, [rax + object.internal.content + 4]
+.pop.move.2:
+  pop rsi
+  pop rdx
+  ret
 
 %endif  ; STACK_ASM_
