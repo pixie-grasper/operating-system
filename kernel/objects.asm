@@ -18,6 +18,7 @@ endstruc
 %define object.system 0
 %define object.integer 1
 %define object.stack 2
+%define object.stack.iterator 3
 
 %include "integer.asm"
 %include "stack.asm"
@@ -151,6 +152,10 @@ objects:
   mov dl, [rdx + object.class]
   cmp dl, object.integer
   je .unref.integer
+  cmp dl, object.stack
+  je .unref.stack
+  cmp dl, object.stack.iterator
+  je .unref.stack.iterator
 .unref.2:
   call .dispose.raw
 .unref.3:
@@ -160,6 +165,12 @@ objects:
   ret
 .unref.integer:
   call integer.dispose.raw
+  jmp .unref.2
+.unref.stack:
+  call stack.dispose.raw
+  jmp .unref.2
+.unref.stack.iterator:
+  call stack.iterator.dispose.raw
   jmp .unref.2
 
   ; in: a = object address

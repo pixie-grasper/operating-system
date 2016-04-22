@@ -2,9 +2,11 @@
 %define STACK_ASM_
 
 ; structure
-; a = {head-node | nil, reserved}
-; node = {value.1, value.2, next | nil}, extra-field = flag:1 bit
-; flag = 0: 0 = value.2 not present, 1 = value.2 present
+;   stack = {head-node | nil, reserved}
+;     node = {value.1, value.2, next | nil}, extra-field = flag: 1 bit
+;     flag = 0: 0 = value.2 not present, 1 = value.2 present
+;   iterator = {[address of the node]:64}, extra-field = flag: 1 bit
+;     flag = 0: 0 = value.1 selected, 1 = value.2 selected
 stack:
   ; out: a = stack id
 .new:
@@ -39,6 +41,9 @@ stack:
 .dispose.raw.3:
   pop rdx
   pop rcx
+  ret
+
+.iterator.dispose.raw:
   ret
 
   ; @const
@@ -129,6 +134,80 @@ stack:
   pop rdx
   pop rcx
   ret
+
+  ; @const
+  ; in: a = stack id
+  ; out: a = stack.iterator id
+.begin:
+  push rcx
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  call objects.new.raw
+  mov byte [rax + object.class], object.stack.iterator
+  xor rcx, rcx
+  mov ecx, [rdx + object.content]
+  shl rcx, 4
+  mov [rax + object.content], rcx
+  mov dl, [rcx + object.internal.padding]
+  mov [rax + object.padding], dl
+  shr rax, 4
+  pop rdx
+  pop rcx
+  ret
+
+  ; in: a = stack.iterator id
+  ; out: a = object id
+.iterator.deref:
+  push rcx
+  push rdx
+  xor rcx, rcx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  mov rax, [rdx + object.content]
+  mov cl, [rdx + object.padding]
+  mov eax, [rax + object.internal.content + rcx * 4]
+  pop rdx
+  pop rcx
+  ret
+
+  ; in/out: a = stack.iterator id
+.iterator.succ:
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  test byte [rdx + object.padding], 0x01
+  jz .iterator.succ.1
+  mov byte [rdx + object.padding], 0x00
+  jmp .iterator.succ.2
+.iterator.succ.1:
+  mov rax, [rdx + object.content]
+  push rcx
+  mov cl, [rax + object.internal.padding]
+  mov [rdx + object.padding], cl
+  pop rcx
+  xor rax, rax
+  mov eax, [rax + object.internal.content + 8]
+  shl rax, 4
+  mov [rdx + object.content], rax
+.iterator.succ.2:
+  pop rdx
+  ret
+
+  ; in: a = stack.iterator id
+.iterator.isend:
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  mov rdx, [rdx + object.content]
+  test rdx, rdx
+  pop rdx
+  jz return.true
+  jmp return.false
 
   ; in: a = stack id
   ; in: d = object id that will be pushed
