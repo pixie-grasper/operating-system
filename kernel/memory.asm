@@ -132,7 +132,7 @@ memory:
   jz .newpage.3
   or edx, eax
   lock cmpxchg [edi], edx
-  jnz .newpage.2
+  jne .newpage.2
   ; then, get bit's position
   xor eax, edx  ; only single bit on
   dec eax
@@ -183,7 +183,7 @@ memory:
   mov ecx, eax
   and ecx, edx
   lock cmpxchg [edi], ecx
-  jnz .disposepage.1
+  jne .disposepage.1
   ret
 
 .disposepage@s:

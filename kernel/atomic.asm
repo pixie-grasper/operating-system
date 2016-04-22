@@ -28,7 +28,7 @@ atomic:
   xor eax, eax
   or edx, -1
   lock cmpxchg [rdi], edx
-  jz return.true
+  je return.true
   jmp return.false
 
 .unlock:
@@ -39,7 +39,7 @@ atomic:
   or eax, -1
   xor edx, edx
   lock cmpxchg [rdi], edx
-  jz return.true
+  je return.true
   jmp return.false
 
 .incd:
@@ -52,7 +52,7 @@ atomic:
   mov edx, eax
   inc edx
   lock cmpxchg [rdi], edx
-  jz return.true
+  je return.true
   jmp return.false
 
 .decd:
@@ -65,7 +65,7 @@ atomic:
   mov edx, eax
   dec edx
   lock cmpxchg [rdi], edx
-  jz return.true
+  je return.true
   jmp return.false
 
 .incq:
@@ -78,7 +78,7 @@ atomic:
   mov rdx, rax
   inc rdx
   lock cmpxchg [rdi], rdx
-  jz return.true
+  je return.true
   jmp return.false
 
 .decq:
@@ -91,7 +91,7 @@ atomic:
   mov rdx, rax
   dec rdx
   lock cmpxchg [rdi], rdx
-  jz return.true
+  je return.true
   jmp return.false
 
 %endif  ; ATOMIC_ASM_

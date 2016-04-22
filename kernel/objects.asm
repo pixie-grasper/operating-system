@@ -125,7 +125,7 @@ objects:
   mov ecx, eax
   inc ecx
   lock cmpxchg [rdx + object.refcount], ecx
-  jnz .ref.1
+  jne .ref.1
   pop rcx
   pop rdx
 .ref.2:
@@ -145,7 +145,7 @@ objects:
   mov ecx, eax
   dec ecx
   lock cmpxchg [rdx + object.refcount], ecx
-  jnz .unref.1
+  jne .unref.1
   test ecx, ecx
   jnz .unref.3
   mov rax, rdx
@@ -195,7 +195,7 @@ objects:
   mov edx, eax
   and edx, ecx
   lock cmpxchg [rdi], edx
-  jnz .dispose.raw.1
+  jne .dispose.raw.1
   pop rdi
   pop rdx
   pop rcx
