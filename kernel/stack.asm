@@ -26,7 +26,7 @@ stack:
 .dispose.raw.1:
   mov eax, [rdx + object.internal.content]
   call objects.unref
-  test byte [rdx + object.padding], 0x01
+  test byte [rdx + object.internal.padding], 0x01
   jz .dispose.raw.2
   mov eax, [rdx + object.internal.content + 4]
   call objects.unref
@@ -75,7 +75,7 @@ stack:
   xor rax, rax
   mov eax, [rdx + object.content]
   shl rax, 4
-  test byte [rax + object.padding], 0x01
+  test byte [rax + object.internal.padding], 0x01
   jnz .top.1
   mov eax, [rax + object.internal.content]
   jmp .top.2
@@ -103,7 +103,7 @@ stack:
   jz .nth.3
   dec rdx
   jz .nth.5
-  test byte [rax + object.padding], 0x01
+  test byte [rax + object.internal.padding], 0x01
   jz .nth.2
   dec rdx
 .nth.2:
@@ -113,7 +113,7 @@ stack:
   mov rax, rcx
   jmp .nth.1
 .nth.3:
-  test byte [rax + object.padding], 0x01
+  test byte [rax + object.internal.padding], 0x01
   jnz .nth.4
   mov eax, [rax + object.internal.content]
   jmp .nth.7
@@ -121,7 +121,7 @@ stack:
   mov eax, [rax + object.internal.content + 4]
   jmp .nth.7
 .nth.5:
-  test byte [rax + object.padding], 0x01
+  test byte [rax + object.internal.padding], 0x01
   jz .nth.6
   mov eax, [rax + object.internal.content]
   jmp .nth.7
@@ -234,22 +234,22 @@ stack:
   shl rsi, 4
   jnz .push.move.1
   call objects.new.chunk
-  mov byte [rax + object.padding], 0x00
+  mov byte [rax + object.internal.padding], 0x00
   mov [rax + object.internal.content], edx
   mov [rax + object.internal.content + 4], rsi
   shr rax, 4
   mov [rdi + object.content], eax
   jmp .push.move.3
 .push.move.1:
-  test byte [rsi + object.padding], 0x01
+  test byte [rsi + object.internal.padding], 0x01
   jnz .push.move.2
-  mov byte [rsi + object.padding], 0x01
+  mov byte [rsi + object.internal.padding], 0x01
   mov [rsi + object.internal.content + 4], edx
   jmp .push.move.3
 .push.move.2:
   call objects.new.chunk
   shr rsi, 4
-  mov byte [rax + object.padding], 0x00
+  mov byte [rax + object.internal.padding], 0x00
   mov [rax + object.internal.content], edx
   mov [rax + object.internal.content + 8], esi
   shr rax, 4
@@ -271,7 +271,7 @@ stack:
   xor rax, rax
   mov eax, [rdx + object.content]
   shl rax, 4
-  test byte [rax + object.padding], 0x01
+  test byte [rax + object.internal.padding], 0x01
   jnz .pop.1
   push rax
   mov eax, [rax + object.internal.content]
@@ -282,7 +282,7 @@ stack:
   mov [rdx + object.content], esi
   jmp .pop.2
 .pop.1:
-  mov byte [rax + object.padding], 0x00
+  mov byte [rax + object.internal.padding], 0x00
   mov eax, [rax + object.internal.content + 4]
   call objects.unref
 .pop.2:
@@ -302,7 +302,7 @@ stack:
   xor rax, rax
   mov eax, [rdx + object.content]
   shl rax, 4
-  test byte [rax + object.padding], 0x01
+  test byte [rax + object.internal.padding], 0x01
   jnz .pop.move.1
   mov esi, [rax + object.internal.content + 8]
   mov [rdx + object.content], esi
@@ -311,7 +311,7 @@ stack:
   mov eax, esi
   jmp .pop.move.2
 .pop.move.1:
-  mov byte [rax + object.padding], 0x00
+  mov byte [rax + object.internal.padding], 0x00
   mov eax, [rax + object.internal.content + 4]
 .pop.move.2:
   pop rsi
