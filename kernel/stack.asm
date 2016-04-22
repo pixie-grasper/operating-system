@@ -184,15 +184,17 @@ stack:
   mov byte [rdx + object.padding], 0x00
   jmp .iterator.succ.2
 .iterator.succ.1:
-  mov rax, [rdx + object.content]
+  push rax
   push rcx
+  mov rax, [rdx + object.content]
   mov cl, [rax + object.internal.padding]
   mov [rdx + object.padding], cl
-  pop rcx
   xor rax, rax
   mov eax, [rax + object.internal.content + 8]
   shl rax, 4
   mov [rdx + object.content], rax
+  pop rcx
+  pop rax
 .iterator.succ.2:
   pop rdx
   ret
