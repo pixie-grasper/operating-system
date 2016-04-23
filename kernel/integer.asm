@@ -9,6 +9,16 @@ integer:
   shr rax, 4
   ret
 
+  ; in: a = int:64
+  ; out: a = integer id
+.new.with.value:
+  push rdx
+  mov rdx, rax
+  call .new
+  call .set
+  pop rdx
+  ret
+
 .dispose.raw:
   ret
 
