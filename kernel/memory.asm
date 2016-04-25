@@ -196,6 +196,23 @@ memory:
   pop rcx
   ret
 
+  ; in: a = page address
+.zerofill:
+  push rax
+  push rcx
+  push rdx
+  xor edx, edx
+  mov ecx, 4096 / 4
+.zerofill.1:
+  mov [rax], edx
+  add rax, 4
+  dec ecx
+  jnz .zerofill.1
+  pop rdx
+  pop rcx
+  pop rax
+  ret
+
 .size: dq 0
 .initialized: dd 0
 %endif
