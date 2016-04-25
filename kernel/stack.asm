@@ -17,6 +17,7 @@ stack:
 
   ; in: a = stack address
 .dispose.raw:
+  push rax
   push rcx
   push rdx
   xor rdx, rdx
@@ -41,6 +42,7 @@ stack:
 .dispose.raw.3:
   pop rdx
   pop rcx
+  pop rax
   ret
 
 .iterator.dispose.raw:
