@@ -19,9 +19,11 @@ endstruc
 %define object.integer 1
 %define object.stack 2
 %define object.stack.iterator 3
+%define object.octetbuffer 4
 
 %include "integer.asm"
 %include "stack.asm"
+%include "octet-buffer.asm"
 
 objects:
 .init:
@@ -54,6 +56,7 @@ objects:
   pop rcx
   ret
 
+  ; out: a = chunk address
   ; assume run on single-process per thread.
 .new.chunk:
   push rcx
@@ -249,15 +252,15 @@ objects:
   ret
 
 .new.nil:
-  xor eax, eax
+  xor rax, rax
   ret
 
 .new.false:
-  xor eax, eax
+  xor rax, rax
   ret
 
 .new.true:
-  mov eax, 1
+  mov rax, 1
   ret
 
   ; in: a = object id
