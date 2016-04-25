@@ -211,6 +211,8 @@ objects:
   jz .new.false
   test eax, eax
   jz .new.true
+  cmp eax, edx
+  je .new.true
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
