@@ -212,7 +212,7 @@ objects:
   test eax, eax
   jz .new.true
   cmp eax, edx
-  je .new.true
+  je .new.false
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
