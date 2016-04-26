@@ -118,6 +118,7 @@ objects:
 .ref:
   call .isbool
   jnc .ref.2
+  push rax
   push rcx
   push rdx
   xor rdx, rdx
@@ -129,8 +130,9 @@ objects:
   inc ecx
   lock cmpxchg [rdx + object.refcount], ecx
   jne .ref.1
-  pop rcx
   pop rdx
+  pop rcx
+  pop rax
 .ref.2:
   ret
 
