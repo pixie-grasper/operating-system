@@ -51,9 +51,8 @@ set:
   ; out: a = false if not found, true if found
 .find:
   push rcx
-  push rdx
+  ; rdx not changed
   push rsi
-  push rdi
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
@@ -89,16 +88,12 @@ set:
   jmp .find.1
 .find.3:
   call objects.new.true
-  pop rdi
   pop rsi
-  pop rdx
   pop rcx
   ret
 .find.4:
   call objects.new.false
-  pop rdi
   pop rsi
-  pop rdx
   pop rcx
   ret
 
