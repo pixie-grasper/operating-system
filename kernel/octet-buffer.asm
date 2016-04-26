@@ -67,6 +67,7 @@ octet_buffer:
   jnz .dispose.raw.6
   ret
 
+  ; @const
   ; in: a = octet-buffer id
   ; in: d = octet-wised index
   ; out: a = nil | mapped address

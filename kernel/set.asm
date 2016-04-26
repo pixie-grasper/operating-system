@@ -45,6 +45,7 @@ set:
 .dispose.raw.4:
   ret
 
+  ; @const
   ; in: a = set id
   ; in: d = value id
   ; out: a = false if not found, true if found
