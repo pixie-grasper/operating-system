@@ -236,7 +236,7 @@ objects:
   jb .new.true
   jmp .new.false
 .lt@us.integer:
-  call integer.lt@s
+  call integer.lt
   ret
 
 .lt:

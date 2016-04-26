@@ -45,7 +45,7 @@ integer:
   ; in: a = integer id 1
   ; in: d = integer id 2
   ; out: a = result
-.lt:
+.lt@us:
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
@@ -59,9 +59,9 @@ integer:
   jl objects.new.true
   jmp objects.new.false
 
-.lt@s:
+.lt:
   push rcx
-  call .lt
+  call .lt@us
   pop rcx
   ret
 
