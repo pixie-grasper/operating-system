@@ -20,9 +20,11 @@ endstruc
 %define object.stack 2
 %define object.stack.iterator 3
 %define object.octetbuffer 4
+%define object.set 5
 
 %include "integer.asm"
 %include "octet-buffer.asm"
+%include "set.asm"
 %include "stack.asm"
 
 objects:
@@ -206,47 +208,43 @@ objects:
   pop rcx
   ret
 
-  ; compare a < b, return it.
+  ; compare a < d, return it.
   ; note: nil or false < any (without nil or false).
   ; in: a = object id 1
   ; in: d = object id 2
   ; out: a = boolean id
-.lt:
+.lt@us:
   test edx, edx
   jz .new.false
   test eax, eax
   jz .new.true
   cmp eax, edx
   je .new.false
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  mov rsi, rcx
-  xor rcx, rcx
-  mov ecx, edx
-  shl rcx, 4
-  mov rdi, rcx
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
+  xor rdi, rdi
+  mov edi, edx
+  shl rdi, 4
   mov cl, [rsi + object.class]
   cmp cl, [rdi + object.class]
   ja .new.false
   jb .new.true
-  cmp cl, object.system
-  je .lt.system
   cmp cl, object.integer
-  je .lt.integer
-.lt.system:
-  call integer.lt@s  ; TODO: compare the system objects exactly
-  ret
-.lt.integer:
+  je .lt@us.integer
+  cmp rsi, rdi  ; shallow compare
+  jb .new.true
+  jmp .new.false
+.lt@us.integer:
   call integer.lt@s
   ret
 
-.lt@s:
+.lt:
   push rcx
   push rdx
   push rsi
   push rdi
-  call .lt
+  call .lt@us
   pop rdi
   pop rsi
   pop rdx
