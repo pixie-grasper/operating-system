@@ -22,8 +22,8 @@ endstruc
 %define object.octetbuffer 4
 
 %include "integer.asm"
-%include "stack.asm"
 %include "octet-buffer.asm"
+%include "stack.asm"
 
 objects:
 .init:
