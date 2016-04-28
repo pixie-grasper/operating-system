@@ -18,30 +18,8 @@ stack:
   ; in: a = stack address
 .dispose.raw:
   push rax
-  push rcx
-  push rdx
-  xor rdx, rdx
-  mov edx, [rax + object.content]
-  shl rdx, 4
-  jz .dispose.raw.3
-.dispose.raw.1:
-  mov eax, [rdx + object.internal.content]
-  call objects.unref
-  test byte [rdx + object.internal.padding], 0x01
-  jz .dispose.raw.2
-  mov eax, [rdx + object.internal.content + 4]
-  call objects.unref
-.dispose.raw.2:
-  xor rcx, rcx
-  mov ecx, [rdx + object.internal.content + 8]
-  mov rax, rdx
-  call objects.dispose.raw
-  mov rdx, rcx
-  shl rdx, 4
-  jnz .dispose.raw.1
-.dispose.raw.3:
-  pop rdx
-  pop rcx
+  shr rax, 4
+  call .clear
   pop rax
   ret
 
@@ -320,6 +298,69 @@ stack:
 .pop.move.2:
   pop rsi
   pop rdx
+  ret
+
+  ; in: a = stack id
+.clear:
+  push rax
+  push rcx
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  xor rax, rax
+  mov eax, [rdx + object.content]
+  shl rax, 4
+  mov rdx, rax
+  jz .clear.raw.3
+  push rax
+.clear.raw.1:
+  mov eax, [rdx + object.internal.content]
+  call objects.unref
+  test byte [rdx + object.internal.padding], 0x01
+  jz .clear.raw.2
+  mov eax, [rdx + object.internal.content + 4]
+  call objects.unref
+.clear.raw.2:
+  xor rcx, rcx
+  mov ecx, [rdx + object.internal.content + 8]
+  mov rax, rdx
+  call objects.dispose.raw
+  mov rdx, rcx
+  shl rdx, 4
+  jnz .clear.raw.1
+  pop rax
+  mov [rax + object.content], edx
+.clear.raw.3:
+  pop rdx
+  pop rcx
+  pop rax
+  ret
+
+  ; in: a = stack id
+.clear.move:
+  push rax
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  xor rax, rax
+  mov eax, [rdx + object.content]
+  shl rax, 4
+  jz .clear.move.2
+  push rdx
+.clear.move.1:
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  call objects.dispose.raw
+  shl rdx, 4
+  mov rax, rdx
+  jnz .clear.move.1
+  pop rdx
+  mov [rdx + object.content], eax
+.clear.move.2:
+  pop rdx
+  pop rax
   ret
 
 %endif  ; STACK_ASM_
