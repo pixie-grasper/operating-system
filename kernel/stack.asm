@@ -202,7 +202,7 @@ stack:
   ret
 
   ; in: a = stack id
-  ; in: d = object id that will be pushed
+  ; in: d = object id / any 32 bits integer that will be pushed
 .push.move:
   push rax
   ; rdx not changed
