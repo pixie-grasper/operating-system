@@ -3,8 +3,8 @@
 
 ; structure
 ;   set = {root-node | nil, reserved}
-;     node = {value, left | nil, right | nil}, extra-field = balance: 2 bits
-;     balance = 1 .. 0: 00 = left = right, 01 = left < right, 10 = left > right
+;     node = {value, left | nil, right | nil}, extra-field = balance: 8 bits
+;     balance = -2 .. 2 (includes internal-state-value)
 
 set:
 .new:
@@ -198,11 +198,229 @@ set:
   pop rcx
   pop rax
   ret
+
   ; in: a: root node id
   ; in: d: stack id indicates path
   ; out: a: root node id
-  ; TODO: implement
 .insert.balance:
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  ; b: address of the pnode
+  ; c: stack id
+  ; si: address of the new-node
+  ; di: root node id
+  mov edi, eax
+  ; while path.len > 0
+  mov eax, edx
+  call stack.empty
+  test eax, eax
+  jnz .insert.balance.8
+  mov ecx, edx
+  xor esi, esi
+.insert.balance.1:
+  ; pnode, dir = path.pop()
+  mov eax, ecx
+  call stack.pop.move
+  mov edx, eax
+  mov eax, ecx
+  call stack.pop.move
+  xor rbx, rbx
+  mov ebx, eax
+  shl rbx, 4
+  ; if dir == LEFT: pnode.balance++ else: pnode.balance--
+  ; note: dir == 0(LEFT) or dir == 1(RIGHT).
+  add edx, edx
+  dec edx
+  sub [rbx + object.internal.padding], dl
+  ; if pnode.balance == 0: return root
+  mov dl, [rbx + object.internal.padding]
+  test dl, dl
+  jz .insert.balance.7
+  ; if pnode.balance > 1:
+  cmp dl, 1
+  jng .insert.balance.3
+  ; if pnode.left.balance < 0:
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content + 4]
+  shl rdx, 4
+  cmp byte [rdx + object.internal.padding], 0
+  jnl .insert.balance.2
+  ; pnode.left = rotate.left pnode.left
+  mov rax, rdx
+  call .rotate.left
+  shr rax, 4
+  mov [rbx + object.internal.content + 4], eax
+  ; new-node = rotate.right pnode
+  mov rax, rbx
+  call .rotate.right
+  mov rsi, rax
+  ; balance.update new-node
+  call .balance.update
+  jmp .insert.balance.6
+  ; else:
+.insert.balance.2:
+  ; new-node = rotate.right pnode
+  mov rax, rbx
+  call .rotate.right
+  mov rsi, rax
+  ; new-node.balance <- 0
+  ; pnode.balance <- 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rbx + object.internal.padding], 0
+  ; break
+  jmp .insert.balance.6
+  ; elif pnode.balance < -1:
+.insert.balance.3:
+  cmp dl, -1
+  jnl .insert.balance.5
+  ; if pnode.right.balance > 0:
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content + 8]
+  shl rdx, 4
+  cmp byte [rdx + object.internal.padding], 0
+  jng .insert.balance.4
+  ; pnode.right = rotate.right pnode.right
+  mov rax, rdx
+  call .rotate.right
+  shr rax, 4
+  mov [rbx + object.internal.content + 8], eax
+  ; new-node = rotate.left pnode
+  mov rax, rbx
+  call .rotate.left
+  mov rsi, rax
+  ; balance.update new-node
+  call .balance.update
+  jmp .insert.balance.6
+  ; else:
+.insert.balance.4:
+  ; new-node = rotate.right pnode
+  mov rax, rbx
+  call .rotate.left
+  mov rsi, rax
+  ; new-node.balance <- 0
+  ; pnode.balance <- 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rbx + object.internal.padding], 0
+  ; break
+  jmp .insert.balance.6
+.insert.balance.5:  ; wend
+  mov eax, ecx
+  call stack.empty
+  test eax, eax
+  jz .insert.balance.1
+.insert.balance.6:
+  ; if path.len > 0:
+  mov eax, ecx
+  call stack.empty
+  jz .insert.balance.7
+  ; gnode, gdir = path.pop()
+  mov eax, ecx
+  call stack.pop.move
+  xor rdx, rdx
+  mov edx, eax
+  mov eax, ecx
+  call stack.pop.move
+  xor rbx, rbx
+  mov ebx, eax
+  shl rbx, 4
+  ; if gdir == LEFT: gnode.left = new-node else: gnode.right = new-node
+  shr rsi, 4
+  mov [rbx + object.internal.content + 4 + rdx * 4], esi
+.insert.balance.7:
+  ; elif new-node is not nil: return new-node
+  shr rsi, 4
+  jz .insert.balance.8
+  mov edi, esi
+.insert.balance.8:
+  mov eax, edi
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  ret
+
+  ; in/out: a = address of the node
+.rotate.right:
+  push rcx
+  push rdx
+  ; lnode = node.left
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  ; node.left = lnode.right
+  mov ecx, [rdx + object.internal.content + 8]
+  mov [rax + object.internal.content + 4], ecx
+  ; lnode.right = node
+  shr rax, 4
+  mov [rdx + object.internal.content + 8], eax
+  ; return lnode
+  mov rax, rdx
+  pop rdx
+  pop rcx
+  ret
+
+  ; in/out: a = address of the node
+.rotate.left:
+  push rcx
+  push rdx
+  ; rnode = node.right
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  ; node.right = rnode.left
+  mov ecx, [rdx + object.internal.content + 4]
+  mov [rax + object.internal.content + 8], ecx
+  ; rnode.left = node
+  shr rax, 4
+  mov [rdx + object.internal.content + 4], eax
+  ; return rnode
+  mov rax, rdx
+  pop rdx
+  pop rcx
+  ret
+
+  ; in: a = address of the node
+.balance.update:
+  push rdx
+  cmp byte [rax + object.internal.padding], 1
+  jne .balance.update.1
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], -1
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+  jmp .balance.update.3
+.balance.update.1:
+  cmp byte [rax + object.internal.padding], -1
+  jne .balance.update.2
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 1
+  jmp .balance.update.3
+.balance.update.2:
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+.balance.update.3:
+  mov byte [rax + object.internal.padding], 0
+  pop rdx
   ret
 
 %endif  ; SET_ASM_
