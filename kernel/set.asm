@@ -15,34 +15,87 @@ set:
 
 .dispose.raw:
   push rax
+  shr rax, 4
+  call .clear
+  pop rax
+  ret
+
+  ; in: a = set id
+.clear:
+  push rax
   push rdx
   xor rdx, rdx
-  mov edx, [rax + object.content]
+  mov edx, eax
   shl rdx, 4
-  jz .dispose.raw.1
-  call .dispose.raw.2
-.dispose.raw.1:
+  xor rax, rax
+  mov eax, [rdx + object.content]
+  shl rax, 4
+  jz .clear.1
+  mov rdx, rax
+  call .clear.2
+.clear.1:
   pop rdx
   pop rax
   ret
-.dispose.raw.2:
+.clear.2:
   mov eax, [rdx + object.internal.content]
   call objects.unref
-  push rdx
   mov rax, rdx
   xor rdx, rdx
   mov edx, [rax + object.internal.content + 4]
   shl rdx, 4
-  jz .dispose.raw.3
-  call .dispose.raw.2
-.dispose.raw.3:
+  jz .clear.3
+  push rax
+  call .clear.2
   pop rax
+.clear.3:
   xor rdx, rdx
   mov edx, [rax + object.internal.content + 8]
   shl rdx, 4
-  jz .dispose.raw.4
-  call .dispose.raw.2
-.dispose.raw.4:
+  jz .clear.4
+  push rax
+  call .clear.2
+  pop rax
+.clear.4:
+  call objects.dispose.raw
+  ret
+
+  ; in: a = set id
+.clear.move:
+  push rax
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  xor rax, rax
+  mov eax, [rdx + object.content]
+  shl rax, 4
+  jz .clear.move.1
+  call .clear.move.2
+.clear.move.1:
+  pop rdx
+  pop rax
+  ret
+.clear.move.2:
+  mov rdx, rax
+  xor rax, rax
+  mov eax, [rdx + object.internal.content + 4]
+  shl rax, 4
+  jz .clear.move.3
+  push rdx
+  call .clear.move.2
+  pop rdx
+.clear.move.3:
+  xor rax, rax
+  mov eax, [rdx + object.internal.content + 8]
+  shl rax, 4
+  jz .clear.move.4
+  push rdx
+  call .clear.move.2
+  pop rdx
+.clear.move.4:
+  mov rax, rdx
+  call objects.dispose.raw
   ret
 
   ; @const
