@@ -238,7 +238,7 @@ set:
   ; if pnode.balance == 0: return root
   mov dl, [rbx + object.internal.padding]
   test dl, dl
-  jz .insert.balance.7
+  jz .insert.balance.8
   ; if pnode.balance > 1:
   cmp dl, 1
   jng .insert.balance.3
@@ -296,7 +296,7 @@ set:
   jmp .insert.balance.6
   ; else:
 .insert.balance.4:
-  ; new-node = rotate.right pnode
+  ; new-node = rotate.left pnode
   mov rax, rbx
   call .rotate.left
   mov rsi, rax
@@ -315,7 +315,8 @@ set:
   ; if path.len > 0:
   mov eax, ecx
   call stack.empty
-  jz .insert.balance.7
+  test eax, eax
+  jnz .insert.balance.7
   ; gnode, gdir = path.pop()
   mov eax, ecx
   call stack.pop.move
@@ -329,6 +330,7 @@ set:
   ; if gdir == LEFT: gnode.left = new-node else: gnode.right = new-node
   shr rsi, 4
   mov [rbx + object.internal.content + 4 + rdx * 4], esi
+  jmp .insert.balance.8
 .insert.balance.7:
   ; elif new-node is not nil: return new-node
   shr rsi, 4
