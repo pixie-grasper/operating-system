@@ -204,9 +204,9 @@ set:
   mov eax, [rsi + object.internal.content + 8]
   shl rax, 4
   mov rsi, rax
-  ; then, if node->right != null, continue node <- node->right
+  ; then, if node->right != nil, continue node <- node->right
   jnz .insert.2
-  ; if node->right == null, node->right = new and balance
+  ; if node->right == nil, node->right = new and balance
   call objects.new.chunk
   mov [rax + object.internal.content], edi
   shr rax, 4
@@ -231,7 +231,7 @@ set:
   mov eax, [rsi + object.internal.content + 4]
   shl rax, 4
   mov rsi, rax
-  ; then, if node->left != null, continue node <- node->left
+  ; then, if node->left != nil, continue node <- node->left
   jnz .insert.2
   call objects.new.chunk
   mov [rax + object.internal.content], edi
@@ -308,9 +308,9 @@ set:
   mov eax, [rsi + object.internal.content + 8]
   shl rax, 4
   mov rsi, rax
-  ; then, if node->right != null, continue node <- node->right
+  ; then, if node->right != nil, continue node <- node->right
   jnz .insert.move.2
-  ; if node->right == null, node->right = new and balance
+  ; if node->right == nil, node->right = new and balance
   call objects.new.chunk
   mov [rax + object.internal.content], edi
   shr rax, 4
@@ -335,7 +335,7 @@ set:
   mov eax, [rsi + object.internal.content + 4]
   shl rax, 4
   mov rsi, rax
-  ; then, if node->left != null, continue node <- node->left
+  ; then, if node->left != nil, continue node <- node->left
   jnz .insert.move.2
   call objects.new.chunk
   mov [rax + object.internal.content], edi
@@ -502,6 +502,188 @@ set:
   pop rdx
   pop rcx
   pop rbx
+  ret
+
+  ; in: a = set id
+  ; in: d = value id
+.remove:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  push rbp
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  xor rsi, rsi
+  mov esi, [rcx + object.content]
+  shl rsi, 4
+  jz .remove.14
+  call stack.new
+  mov ebp, eax
+  mov edi, edx
+  ; c: address of the set
+  ; si: address of the current node
+  ; di: value id
+  ; bp: stack id indicates path
+.remove.1:
+  ; while node is not nil:
+  mov eax, [rsi + object.internal.content]
+  mov edx, edi
+  call objects.lt
+  test eax, eax
+  jz .remove.2
+  ; [si:o.i.c.] < value
+  ; push node, true
+  mov eax, ebp
+  mov rdx, rsi
+  shr rdx, 4
+  call stack.push.move
+  mov edx, 1
+  call stack.push.move
+  ; node = node.right
+  xor rax, rax
+  mov eax, [rsi + object.internal.content + 8]
+  shl rax, 4
+  mov rsi, rax
+  jmp .remove.3
+.remove.2:
+  mov eax, edi
+  mov edx, [rsi + object.internal.content]
+  call objects.lt
+  test eax, eax
+  jz .remove.4
+  ; [si:o.i.c] > value
+  ; push node, false
+  mov eax, ebp
+  mov rdx, rsi
+  shr rdx, 4
+  call stack.push.move
+  xor edx, edx
+  call stack.push.move
+  ; node = node.left
+  xor rax, rax
+  mov eax, [rsi + object.internal.content + 4]
+  shl rax, 4
+  mov rsi, rax
+.remove.3:
+  ; wend
+  test rsi, rsi
+  jnz .remove.1
+  jmp .remove.13
+.remove.4:
+  ; [si:o.i.c] == value
+  ; if it has childlen:
+  mov eax, [rsi + object.internal.content + 4]
+  test eax, eax
+  jz .remove.7
+  mov eax, [rsi + object.internal.content + 8]
+  test eax, eax
+  jz .remove.7
+  ; find node.right.left.left.left. ... .left that is not nil
+  ; push node, true
+  mov eax, ebp
+  mov rdx, rsi
+  shr rdx, 4
+  call stack.push.move
+  mov edx, 1
+  call stack.push.move
+  ; that = node.right
+  xor rbx, rbx
+  mov ebx, [rsi + object.internal.content + 8]
+  shl rbx, 4
+.remove.5:
+  ; while that.left != nil:
+  xor rax, rax
+  mov eax, [rbx + object.internal.content + 4]
+  test eax, eax
+  jz .remove.6
+  ; push that, false
+  mov eax, ebp
+  mov rdx, rbx
+  shr rdx, 4
+  call stack.push.move
+  xor edx, edx
+  call stack.push.move
+  ; that = that.left
+  xor rax, rax
+  mov eax, [rbx + object.internal.content + 4]
+  shl rax, 4
+  mov rbx, rax
+  jmp .remove.5
+.remove.6:
+  ; node.value = that.value
+  mov eax, [rsi + object.internal.content]
+  call objects.unref
+  mov edx, [rbx + object.internal.content]
+  mov [rsi + object.internal.content], edx
+  ; node = that
+  mov rsi, rbx
+.remove.7:
+  ; if path.len != 0: pnode = path.top().node else: pnode = nil
+  xor rbx, rbx
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jnz .remove.8
+  mov eax, ebp
+  mov rdx, 1
+  call stack.nth
+  mov ebx, eax
+  shl rbx, 4
+  jmp .remove.8
+.remove.8:
+  ; now, (node.left && node.right) == nil
+  ; if node.left == nil: node = node.right else: node = node.left
+  mov edx, [rsi + object.internal.content + 4]
+  test edx, edx
+  jnz .remove.9
+  mov edx, [rsi + object.internal.content + 8]
+.remove.9:
+  mov rax, rsi
+  call objects.dispose.raw
+  ; if root-node removed, root-node <- node
+  test rbx, rbx
+  jnz .remove.10
+  mov [rcx + object.content], edx
+  jmp .remove.13
+.remove.10:
+  mov eax, ebp
+  call stack.top  ; it's safe; if stack is empty, ebx == nil
+  test eax, eax
+  jnz .remove.11
+  ; pnode.left = node
+  mov [rbx + object.internal.content + 4], edx
+  jmp .remove.12
+.remove.11:
+  ; pnode.right = node
+  mov [rbx + object.internal.content + 8], edx
+.remove.12:
+  mov eax, [rcx + object.content]
+  mov edx, ebp
+  call .remove.balance
+  mov [rcx + object.content], eax
+.remove.13:
+  mov eax, ebp
+  call stack.clear.move
+  call objects.unref
+.remove.14:
+  pop rbp
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  ret
+
+  ; in: a: root node id
+  ; in: d: stack id indicates path
+  ; out: a: root node id
+  ; TODO: implement
+.remove.balance:
   ret
 
   ; in/out: a = address of the node
