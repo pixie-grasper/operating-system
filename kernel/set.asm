@@ -676,8 +676,157 @@ set:
   ; in: a: root node id
   ; in: d: stack id indicates path
   ; out: a: root node id
-  ; TODO: implement
 .remove.balance:
+  push rbx
+  push rcx
+  push rsi
+  push rdi
+  ; b: address of the pnode
+  ; c: stack id
+  ; si: address of the new-node
+  ; di: root node id
+  mov edi, eax
+  mov ecx, edx
+  ; while path.len > 0
+.remove.balance.1:
+  mov eax, ecx
+  call stack.empty
+  test eax, eax
+  jnz .remove.balance.10
+  ; new-node = nil
+  xor rsi, rsi
+  ; pnode, dir = path.pop()
+  mov eax, ecx
+  call stack.pop.move
+  mov edx, eax
+  mov eax, ecx
+  call stack.pop.move
+  xor rbx, rbx
+  mov ebx, eax
+  shl rbx, 4
+  ; if dir == LEFT: pnode.balance-- else: pnode.balance++
+  add edx, edx
+  dec edx
+  add [rbx + object.internal.padding], dl
+  ; if pnode.balance > 1:
+  mov dl, [rbx + object.internal.padding]
+  cmp dl, 1
+  jng .remove.balance.4
+  ; if pnode.left.balance < 0:
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content + 4]
+  shl rdx, 4
+  cmp byte [rdx + object.internal.padding], 0
+  jnl .remove.balance.2
+  ; pnode.left = rotate.left pnode.left
+  xor rax, rax
+  mov eax, [rbx + object.internal.content + 4]
+  shl rax, 4
+  call .rotate.left
+  shr rax, 4
+  mov [rbx + object.internal.content + 4], eax
+  ; new-node = rotate.right pnode
+  mov rax, rbx
+  call .rotate.right
+  mov rsi, rax
+  ; balance.update new-node
+  call .balance.update
+  jmp .remove.balance.8
+.remove.balance.2:
+  ; new-node = rotate.right pnode
+  mov rax, rbx
+  call .rotate.right
+  mov rsi, rax
+  ; if new-node.balance == 0: new-node.balance = -1; pnode.balance = 1
+  cmp byte [rax + object.internal.padding], 0
+  jne .remove.balance.3
+  mov byte [rax + object.internal.padding], -1
+  mov byte [rbx + object.internal.padding], 1
+  jmp .remove.balance.8
+.remove.balance.3:
+  ; else: new-node.balance = 0; pnode.balance = 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rbx + object.internal.padding], 0
+  jmp .remove.balance.8
+.remove.balance.4:
+  ; elif pnode.balance < -1:
+  cmp dl, -1
+  jnl .remove.balance.7
+  ; if pnode.right.balance > 0:
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content + 8]
+  shl rdx, 4
+  cmp byte [rdx + object.internal.padding], 0
+  jng .remove.balance.5
+  ; pnode.right = rotate.right pnode.right
+  mov rax, rdx
+  call .rotate.right
+  shr rax, 4
+  mov [rbx + object.internal.content + 8], eax
+  ; new-node = rotate.left pnode
+  mov rax, rbx
+  call .rotate.left
+  mov rsi, rax
+  ; balance.update new-node
+  call .balance.update
+  jmp .remove.balance.8
+.remove.balance.5:
+  ; new-node = rotate.left pnode
+  mov rax, rbx
+  call .rotate.left
+  mov rsi, rax
+  ; if new-node.balance == 0: new-node.balance = 1; pnode.balance = -1
+  cmp byte [rax + object.internal.padding], 0
+  jne .remove.balance.6
+  mov byte [rax + object.internal.padding], 1
+  mov byte [rbx + object.internal.padding], -1
+  jmp .remove.balance.8
+.remove.balance.6:
+  ; else: new-node.balance = 0; pnode.balance = 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rbx + object.internal.padding], 0
+  jmp .remove.balance.8
+.remove.balance.7:
+  ; elif pnode.balance != 0: break
+  cmp dl, 0
+  jne .remove.balance.10
+.remove.balance.8:
+  ; if new-node != nil:
+  test rsi, rsi
+  jz .remove.balance.1
+  ; if path.len == 0: return new-node
+  mov eax, ecx
+  call stack.empty
+  test eax, eax
+  jz .remove.balance.9
+  shr rsi, 4
+  mov edi, esi
+  jmp .remove.balance.10
+.remove.balance.9:
+  ; gnode, gdir = path.top()
+  mov eax, ecx
+  call stack.top
+  xor rbx, rbx
+  mov ebx, eax
+  shl rbx, 4
+  mov eax, ecx
+  mov edx, 1
+  call stack.nth
+  ; if gdir == LEFT: gnode.left = new-node else: gnode.right = new-node
+  xor rdx, rdx
+  mov edx, eax
+  mov rax, rsi
+  shr rax, 4
+  mov [rbx + object.internal.content + 4 + rdx * 4], eax
+  ; if new-node.balance != 0: break
+  cmp byte [rsi + object.internal.padding], 0
+  je .remove.balance.1
+.remove.balance.10:
+  mov eax, edi
+  pop rdi
+  pop rsi
+  pop rcx
+  pop rbx
   ret
 
   ; in/out: a = address of the node
