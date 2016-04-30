@@ -633,7 +633,6 @@ set:
   call stack.nth
   mov ebx, eax
   shl rbx, 4
-  jmp .remove.8
 .remove.8:
   ; now, (node.left && node.right) == nil
   ; if node.left == nil: node = node.right else: node = node.left
