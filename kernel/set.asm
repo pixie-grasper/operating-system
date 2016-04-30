@@ -520,7 +520,7 @@ set:
   xor rsi, rsi
   mov esi, [rcx + object.content]
   shl rsi, 4
-  jz .remove.14
+  jz .remove.12
   call stack.new
   mov ebp, eax
   mov edi, edx
@@ -572,7 +572,7 @@ set:
   ; wend
   test rsi, rsi
   jnz .remove.1
-  jmp .remove.13
+  jmp .remove.11
 .remove.4:
   ; [si:o.i.c] == value
   ; if it has childlen:
@@ -647,28 +647,23 @@ set:
   test rbx, rbx
   jnz .remove.10
   mov [rcx + object.content], edx
-  jmp .remove.13
+  jmp .remove.11
 .remove.10:
+  ; if dir == LEFT: pnode.left = node else: pnode.right = node
   mov eax, ebp
   call stack.top  ; it's safe; if stack is empty, ebx == nil
-  test eax, eax
-  jnz .remove.11
-  ; pnode.left = node
-  mov [rbx + object.internal.content + 4], edx
-  jmp .remove.12
-.remove.11:
-  ; pnode.right = node
-  mov [rbx + object.internal.content + 8], edx
-.remove.12:
+  xor rbp, rbp
+  mov ebp, eax
+  mov [rbx + object.internal.content + 4 + rbp * 4], edx
   mov eax, [rcx + object.content]
   mov edx, ebp
   call .remove.balance
   mov [rcx + object.content], eax
-.remove.13:
+.remove.11:
   mov eax, ebp
   call stack.clear.move
   call objects.unref
-.remove.14:
+.remove.12:
   pop rbp
   pop rdi
   pop rsi
