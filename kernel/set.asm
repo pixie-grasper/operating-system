@@ -517,6 +517,7 @@ set:
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
+  ; if root-node == nil: do nothing
   xor rsi, rsi
   mov esi, [rcx + object.content]
   shl rsi, 4
@@ -570,7 +571,7 @@ set:
   mov rsi, rax
 .remove.3:
   ; wend
-  test rsi, rsi
+  ; test rsi, rsi ;  test not needed; the shl sets/clears flags.z
   jnz .remove.1
   jmp .remove.11
 .remove.4:
@@ -596,7 +597,6 @@ set:
   shl rbx, 4
 .remove.5:
   ; while that.left != nil:
-  xor rax, rax
   mov eax, [rbx + object.internal.content + 4]
   test eax, eax
   jz .remove.6
@@ -652,9 +652,9 @@ set:
   ; if dir == LEFT: pnode.left = node else: pnode.right = node
   mov eax, ebp
   call stack.top  ; it's safe; if stack is empty, ebx == nil
-  xor rbp, rbp
-  mov ebp, eax
-  mov [rbx + object.internal.content + 4 + rbp * 4], edx
+  xor rdi, rdi
+  mov edi, eax
+  mov [rbx + object.internal.content + 4 + rdi * 4], edx
   mov eax, [rcx + object.content]
   mov edx, ebp
   call .remove.balance
