@@ -530,7 +530,7 @@ set:
   ; di: value id
   ; bp: stack id indicates path
 .remove.1:
-  ; while node is not nil:
+  ; while node != nil:
   mov eax, [rsi + object.internal.content]
   mov edx, edi
   call objects.lt
@@ -545,10 +545,10 @@ set:
   mov edx, 1
   call stack.push.move
   ; node = node.right
-  xor rax, rax
   mov eax, [rsi + object.internal.content + 8]
-  shl rax, 4
-  mov rsi, rax
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
   jmp .remove.3
 .remove.2:
   mov eax, edi
@@ -565,15 +565,15 @@ set:
   xor edx, edx
   call stack.push.move
   ; node = node.left
-  xor rax, rax
   mov eax, [rsi + object.internal.content + 4]
-  shl rax, 4
-  mov rsi, rax
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
 .remove.3:
   ; wend
   ; test rsi, rsi ;  test not needed; the shl sets/clears flags.z
   jnz .remove.1
-  jmp .remove.11
+  jmp .remove.11  ; if not found: dispose stack and return.
 .remove.4:
   ; [si:o.i.c] == value
   ; if it has childlen:
@@ -608,10 +608,10 @@ set:
   xor edx, edx
   call stack.push.move
   ; that = that.left
-  xor rax, rax
   mov eax, [rbx + object.internal.content + 4]
-  shl rax, 4
-  mov rbx, rax
+  xor rbx, rbx
+  mov ebx, eax
+  shl rbx, 4
   jmp .remove.5
 .remove.6:
   ; node.value = that.value
@@ -719,9 +719,7 @@ set:
   cmp byte [rdx + object.internal.padding], 0
   jnl .remove.balance.2
   ; pnode.left = rotate.left pnode.left
-  xor rax, rax
-  mov eax, [rbx + object.internal.content + 4]
-  shl rax, 4
+  mov rax, rdx
   call .rotate.left
   shr rax, 4
   mov [rbx + object.internal.content + 4], eax
@@ -805,13 +803,13 @@ set:
 .remove.balance.9:
   ; gnode, gdir = path.top()
   mov eax, ecx
-  call stack.top
+  mov edx, 1
+  call stack.nth
   xor rbx, rbx
   mov ebx, eax
   shl rbx, 4
   mov eax, ecx
-  mov edx, 1
-  call stack.nth
+  call stack.top
   ; if gdir == LEFT: gnode.left = new-node else: gnode.right = new-node
   xor rdx, rdx
   mov edx, eax
