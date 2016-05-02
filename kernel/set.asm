@@ -103,51 +103,47 @@ set:
   ; in: d = value id
   ; out: a = false if not found, true if found
 .find:
-  push rcx
-  ; rdx not changed
-  push rsi
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  xor rsi, rsi
-  mov esi, [rcx + object.content]
-  shl rsi, 4
-  jz .find.4  ; an empty set has nothing elements
-.find.1:
-  mov eax, [rsi + object.internal.content]
-  call objects.lt
-  test eax, eax
-  jnz .find.2
   push rdx
-  mov eax, edx
-  mov edx, [rsi + object.internal.content]
-  call objects.lt
-  pop rdx
-  test eax, eax
-  jz .find.3
-  ; value < node
+  push rsi
+  push rdi
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
   xor rax, rax
-  mov eax, [rsi + object.internal.content + 4]
+  mov eax, [rsi + object.content]
+  mov edi, edx
+.find.1:
   shl rax, 4
   jz .find.4
   mov rsi, rax
-  jmp .find.1
-.find.2:  ; node < value
+  mov eax, [rsi + object.internal.content]
+  mov edx, edi
+  call objects.lt
+  test eax, eax
+  jz .find.2
+  ; [si:o.i.c] < value
   xor rax, rax
   mov eax, [rsi + object.internal.content + 8]
-  shl rax, 4
-  jz .find.4
-  mov rsi, rax
+  jmp .find.1
+.find.2:
+  mov eax, edi
+  mov edx, [rsi + object.internal.content]
+  call objects.lt
+  test eax, eax
+  jz .find.3
+  ; [si:o.i.c] > value
+  xor rax, rax
+  mov eax, [rsi + object.internal.content + 4]
   jmp .find.1
 .find.3:
-  call objects.new.true
-  pop rsi
-  pop rcx
-  ret
+  mov rax, 1
+  jmp .find.5
 .find.4:
-  call objects.new.false
+  xor rax, rax
+.find.5:
+  pop rdi
   pop rsi
-  pop rcx
+  pop rdx
   ret
 
   ; in: a = set id
