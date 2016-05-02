@@ -803,7 +803,7 @@ set:
 .remove.balance.9:
   ; gnode, gdir = path.top()
   mov eax, ecx
-  mov edx, 1
+  mov rdx, 1
   call stack.nth
   xor rbx, rbx
   mov ebx, eax
