@@ -89,7 +89,7 @@ table:
   mov edi, edx
 .index.1:
   ; si: address of the current node
-  ; di: value id
+  ; di: key id
   xor rcx, rcx
   mov ecx, [rsi + object.internal.content]
   shl rcx, 4
@@ -127,6 +127,451 @@ table:
   pop rsi
   pop rdx
   pop rcx
+  ret
+
+  ; in: a = table id
+  ; in: d = key id
+  ; in: c = value id or nil
+.newindex:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  push rbp
+  push r8
+  xor rbx, rbx
+  mov ebx, eax
+  shl rbx, 4
+  mov edi, edx
+  call stack.new
+  mov ebp, eax
+  xor rsi, rsi
+  mov esi, [rbx + object.content]
+  shl rsi, 4
+  ; b: address of the table
+  ; c: value id or nil
+  ; si: address of the current node
+  ; di: key id
+  ; bp: stack id
+.newindex.1:
+  jz .newindex.4
+  xor r8, r8
+  mov r8d, [rsi + object.internal.content]
+  shl r8, 4
+  mov eax, [r8 + object.internal.content]
+  mov edx, edi
+  call objects.lt
+  test eax, eax
+  jz .newindex.2
+  ; [si:o.i.c].key < key
+  ; push node, true
+  mov eax, ebp
+  mov rdx, rsi
+  shr rdx, 4
+  call stack.push.move
+  mov edx, 1
+  call stack.push.move
+  ; node <- node.right
+  xor rax, rax
+  mov eax, [rsi + object.internal.content + 8]
+  shl rax, 4
+  mov rsi, rax
+  jmp .newindex.1
+.newindex.2:
+  mov eax, edi
+  mov edx, [r8 + object.internal.content]
+  call objects.lt
+  test eax, eax
+  jz .newindex.3
+  ; [si:o.i.c].key > key
+  ; push node, false
+  mov eax, ebp
+  mov rdx, rsi
+  shr rdx, 4
+  call stack.push.move
+  xor edx, edx
+  call stack.push.move
+  ; node <- node.left
+  xor rax, rax
+  mov eax, [rsi + object.internal.content + 4]
+  shl rax, 4
+  mov rsi, rax
+  jmp .newindex.1
+.newindex.3:
+  ; if value == nil: remove pair form the table
+  test ecx, ecx
+  jz .newindex.remove.1
+  ; else: update pair
+  xor rdx, rdx
+  mov edx, [rsi + object.internal.content]
+  shl rdx, 4
+  mov eax, [rdx + object.internal.content + 4]
+  cmp eax, ecx
+  je .newindex.5
+  mov eax, ecx
+  call objects.ref
+  mov eax, [rdx + object.internal.content + 4]
+  call objects.unref
+  mov [rdx + object.internal.content + 4], ecx
+  jmp .newindex.5
+.newindex.4:
+  ; if value == nil: do nothing
+  test ecx, ecx
+  jz .newindex.5
+  ; else: insert the pair
+  call objects.new.chunk
+  mov rsi, rax
+  call objects.new.chunk
+  mov [rax + object.internal.content], edi
+  mov [rax + object.internal.content + 4], ecx
+  mov dword [rax + object.internal.content + 8], 1
+  shr rax, 4
+  mov [rsi + object.internal.content], eax
+  mov eax, edi
+  call objects.ref
+  mov eax, ecx
+  call objects.ref
+  jmp .newindex.insert.1
+.newindex.5:
+  mov eax, ebp
+  call stack.clear.move
+  call objects.unref
+  pop r8
+  pop rbp
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  ret
+
+.newindex.insert.1:
+  ; b: address of the table
+  ; si: address of the dangling node (at the top of the loop) or new-node
+  ; bp: stack id indicates path
+  ; while path.len != 0:
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jnz .newindex.insert.8
+  ; pnode, pdir = path.pop()
+  mov eax, ebp
+  call stack.pop.move
+  xor rdx, rdx
+  mov edx, eax
+  mov eax, ebp
+  call stack.pop.move
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  ; if pdir == LEFT: pnode.left <- node else: pnode.right <- node
+  shr rsi, 4
+  mov [rcx + object.internal.content + 4 + rdx * 4], esi
+  ; if pdir == LEFT: pnode.balance++ else: pnode.balance--
+  add edx, edx
+  dec edx
+  sub [rcx + object.internal.padding], dl
+  ; pnode.weight <- pnode.left.weight + pnode.right.weight + 1
+  ; if pnode.* == nil: pnode.*.weight == 0
+  xor rdx, rdx
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 4]
+  shl rax, 4
+  jz .newindex.insert.2
+  xor rsi, rsi
+  mov esi, [rax + object.internal.content]
+  shl rsi, 4
+  add edx, [rsi + object.internal.content + 8]
+.newindex.insert.2:
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 8]
+  shl rax, 4
+  jz .newindex.insert.3
+  xor rsi, rsi
+  mov esi, [rax + object.internal.content]
+  shl rsi, 4
+  add edx, [rsi + object.internal.content + 8]
+.newindex.insert.3:
+  inc edx
+  xor rax, rax
+  mov eax, [rcx + object.internal.content]
+  shl rax, 4
+  mov [rax + object.internal.content + 8], edx
+  ; if pnode.balance == 0: break
+  mov dl, [rcx + object.internal.padding]
+  test dl, dl
+  jz .newindex.insert.13
+  ; if pnode.balance > 1:
+  cmp dl, 1
+  jng .newindex.insert.5
+  ; if pnode.left.balance < 0:
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 4]
+  shl rax, 4
+  cmp byte [rax + object.internal.padding], 0
+  jnl .newindex.insert.4
+  ; pnode.left <- rotate.left pnode.left
+  call .rotate.left
+  shr rax, 4
+  mov [rcx + object.internal.content + 4], eax
+  ; new-node <- rotate.right pnode
+  mov rax, rcx
+  call .rotate.right
+  mov rsi, rax
+  ; balance.update
+  call .balance.update
+  ; break
+  jmp .newindex.insert.7
+.newindex.insert.4:
+  ; new-node <- rotate.right pnode
+  mov rax, rcx
+  call .rotate.right
+  mov rsi, rax
+  ; new-node.balance <- 0
+  ; pnode.balance <- 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rcx + object.internal.padding], 0
+  ; break
+  jmp .newindex.insert.7
+.newindex.insert.5:
+  ; elif pnode.balance < -1:
+  cmp dl, -1
+  jnl .newindex.insert.1
+  ; if pnode.right.balance > 0:
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 8]
+  shl rax, 4
+  cmp byte [rax + object.internal.padding], 0
+  jng .newindex.insert.6
+  ; pnode.right <- rotate.right pnode.right
+  call .rotate.right
+  ; new-node <- rotate.left pnode
+  mov rax, rcx
+  call .rotate.left
+  mov rsi, rax
+  ; balance.update new-node
+  call .balance.update
+  ; break
+  jmp .newindex.insert.7
+.newindex.insert.6:
+  ; new-node = rotate.left pnode
+  mov rax, rcx
+  call .rotate.left
+  mov rsi, rax
+  ; new-node.balance <- 0
+  ; pnode.balance <- 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rcx + object.internal.padding], 0
+  ; break through
+.newindex.insert.7:
+  ; si: address of a dangling new-node
+  ; if path.len == 0: root-node <- new-node
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jz .newindex.insert.9
+.newindex.insert.8:
+  mov rcx, rsi
+  shr rsi, 4
+  mov [rbx + object.content], esi
+  jmp .newindex.insert.10
+.newindex.insert.9:
+  ; else:
+  ; pnode, pdir <- path.pop()
+  mov eax, ebp
+  call stack.pop.move
+  xor rdx, rdx
+  mov edx, eax
+  mov eax, ebp
+  call stack.pop.move
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  ; if pdir == LEFT: pnode.left <- new-node else: pnode.right <- new-node
+  shr rsi, 4
+  mov [rcx + object.internal.content + 4 + rdx * 4], esi
+.newindex.insert.10:
+  ; b: address of the table
+  ; c: address of the pnode
+  ; bp: stack id indicates path
+  ; while true:
+  ; pnode.weight <- pnode.left.weight + pnode.right.weight + 1
+  ; if pnode.* == nil: pnode.*.weight == 0
+  xor rdx, rdx
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 4]
+  shl rax, 4
+  jz .newindex.insert.11
+  xor rsi, rsi
+  mov esi, [rax + object.internal.content]
+  shl rsi, 4
+  add edx, [rsi + object.internal.content + 8]
+.newindex.insert.11:
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 8]
+  shl rax, 4
+  jz .newindex.insert.12
+  xor rsi, rsi
+  mov esi, [rax + object.internal.content]
+  shl rsi, 4
+  add edx, [rsi + object.internal.content + 8]
+.newindex.insert.12:
+  inc edx
+  xor rax, rax
+  mov eax, [rcx + object.internal.content]
+  shl rax, 4
+  mov [rax + object.internal.content + 8], edx
+.newindex.insert.13:
+  ; if path.len == 0: break
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jnz .newindex.5
+  ; pnode, pdir <- path.pop()
+  mov eax, ebp
+  call stack.pop.move
+  mov eax, ebp
+  call stack.pop.move
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  jmp .newindex.insert.10
+
+.newindex.remove.1:
+  ; b: address of the table
+  ; si: address of the current node
+  ; bp: stack id
+  ; TODO: implement
+  jmp .newindex.5
+
+  ; in/out: a = address of the node
+  ; note: node.left has to exist
+.rotate.right:
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  ; lnode <- node.left
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  ; node.left <- lnode.right
+  mov ecx, [rdx + object.internal.content + 8]
+  mov [rax + object.internal.content + 4], ecx
+  ; lnode.right <- node
+  mov rsi, rax
+  shr rsi, 4
+  mov [rdx + object.internal.content + 8], esi
+  ; lnode.weight <- node.weight
+  xor rsi, rsi
+  mov esi, [rax + object.internal.content]
+  shl rsi, 4
+  xor rdi, rdi
+  mov edi, [rdx + object.internal.content]
+  shl rdi, 4
+  mov ecx, [rsi + object.internal.content + 8]
+  mov [rdi + object.internal.content + 8], ecx
+  ; node.weight <- lnode.weight - lnode.left.weight - 1
+  xor rdi, rdi
+  mov edi, [rdx + object.internal.content + 4]
+  shl rdi, 4
+  jz .rotate.right.1
+  sub ecx, [rdi + object.internal.content + 8]
+.rotate.right.1:
+  dec ecx
+  mov [rsi + object.internal.content + 8], ecx
+  ; return lnode
+  mov rax, rdx
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  ret
+
+  ; in/out: a = address of the node
+.rotate.left:
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  ; rnode = node.right
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  ; node.right = rnode.left
+  mov ecx, [rdx + object.internal.content + 4]
+  mov [rax + object.internal.content + 8], ecx
+  ; rnode.left = node
+  mov rsi, rax
+  shr rsi, 4
+  mov [rdx + object.internal.content + 4], esi
+  ; rnode.weight <- node.weight
+  xor rsi, rsi
+  mov esi, [rax + object.internal.content]
+  shl rsi, 4
+  xor rdi, rdi
+  mov edi, [rdx + object.internal.content]
+  shl rdi, 4
+  mov ecx, [rsi + object.internal.content + 8]
+  mov [rdi + object.internal.content + 8], ecx
+  ; node.weight <- rnode.weight - rnode.right.weight - 1
+  xor rdi, rdi
+  mov edi, [rdx + object.internal.content + 8]
+  shl rdi, 4
+  jz .rotate.left.1
+  sub ecx, [rdi + object.internal.content + 8]
+.rotate.left.1:
+  dec ecx
+  mov [rsi + object.internal.content + 8], ecx
+  ; return rnode
+  mov rax, rdx
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  ret
+
+  ; in: a = address of the node
+.balance.update:
+  push rdx
+  cmp byte [rax + object.internal.padding], 1
+  jne .balance.update.1
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], -1
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+  jmp .balance.update.3
+.balance.update.1:
+  cmp byte [rax + object.internal.padding], -1
+  jne .balance.update.2
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 1
+  jmp .balance.update.3
+.balance.update.2:
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 8]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content + 4]
+  shl rdx, 4
+  mov byte [rdx + object.internal.padding], 0
+.balance.update.3:
+  mov byte [rax + object.internal.padding], 0
+  pop rdx
   ret
 
 %endif  ; TABLE_ASM_
