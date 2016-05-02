@@ -21,11 +21,13 @@ endstruc
 %define object.stack.iterator 3
 %define object.octetbuffer 4
 %define object.set 5
+%define object.table 6
 
 %include "integer.asm"
 %include "octet-buffer.asm"
 %include "set.asm"
 %include "stack.asm"
+%include "table.asm"
 
 objects:
 .init:
