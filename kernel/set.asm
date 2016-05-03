@@ -202,7 +202,7 @@ set:
   mov rsi, rax
   ; then, if node->right != nil, continue node <- node->right
   jnz .insert.2
-  ; if node->right == nil, node->right = new and balance
+  ; if node->right == nil, node->right <- new and balance
   call objects.new.chunk
   mov [rax + object.internal.content], edi
   shr rax, 4
@@ -306,7 +306,7 @@ set:
   mov rsi, rax
   ; then, if node->right != nil, continue node <- node->right
   jnz .insert.move.2
-  ; if node->right == nil, node->right = new and balance
+  ; if node->right == nil, node->right <- new and balance
   call objects.new.chunk
   mov [rax + object.internal.content], edi
   shr rax, 4
@@ -376,7 +376,7 @@ set:
   mov ecx, edx
   xor esi, esi
 .insert.balance.1:
-  ; pnode, dir = path.pop()
+  ; pnode, dir <- path.pop()
   mov eax, ecx
   call stack.pop.move
   mov edx, eax
@@ -403,12 +403,12 @@ set:
   shl rdx, 4
   cmp byte [rdx + object.internal.padding], 0
   jnl .insert.balance.2
-  ; pnode.left = rotate.left pnode.left
+  ; pnode.left <- rotate.left pnode.left
   mov rax, rdx
   call .rotate.left
   shr rax, 4
   mov [rbx + object.internal.content + 4], eax
-  ; new-node = rotate.right pnode
+  ; new-node <- rotate.right pnode
   mov rax, rbx
   call .rotate.right
   mov rsi, rax
@@ -417,7 +417,7 @@ set:
   jmp .insert.balance.6
   ; else:
 .insert.balance.2:
-  ; new-node = rotate.right pnode
+  ; new-node <- rotate.right pnode
   mov rax, rbx
   call .rotate.right
   mov rsi, rax
@@ -437,12 +437,12 @@ set:
   shl rdx, 4
   cmp byte [rdx + object.internal.padding], 0
   jng .insert.balance.4
-  ; pnode.right = rotate.right pnode.right
+  ; pnode.right <- rotate.right pnode.right
   mov rax, rdx
   call .rotate.right
   shr rax, 4
   mov [rbx + object.internal.content + 8], eax
-  ; new-node = rotate.left pnode
+  ; new-node <- rotate.left pnode
   mov rax, rbx
   call .rotate.left
   mov rsi, rax
@@ -451,7 +451,7 @@ set:
   jmp .insert.balance.6
   ; else:
 .insert.balance.4:
-  ; new-node = rotate.left pnode
+  ; new-node <- rotate.left pnode
   mov rax, rbx
   call .rotate.left
   mov rsi, rax
@@ -472,7 +472,7 @@ set:
   call stack.empty
   test eax, eax
   jnz .insert.balance.7
-  ; gnode, gdir = path.pop()
+  ; gnode, gdir <- path.pop()
   mov eax, ecx
   call stack.pop.move
   xor rdx, rdx
@@ -482,7 +482,7 @@ set:
   xor rbx, rbx
   mov ebx, eax
   shl rbx, 4
-  ; if gdir == LEFT: gnode.left = new-node else: gnode.right = new-node
+  ; if gdir == LEFT: gnode.left <- new-node else: gnode.right <- new-node
   shr rsi, 4
   mov [rbx + object.internal.content + 4 + rdx * 4], esi
   jmp .insert.balance.8
@@ -540,7 +540,7 @@ set:
   call stack.push.move
   mov edx, 1
   call stack.push.move
-  ; node = node.right
+  ; node <- node.right
   mov eax, [rsi + object.internal.content + 8]
   xor rsi, rsi
   mov esi, eax
@@ -560,7 +560,7 @@ set:
   call stack.push.move
   xor edx, edx
   call stack.push.move
-  ; node = node.left
+  ; node <- node.left
   mov eax, [rsi + object.internal.content + 4]
   xor rsi, rsi
   mov esi, eax
@@ -589,7 +589,7 @@ set:
   call stack.push.move
   mov edx, 1
   call stack.push.move
-  ; that = node.right
+  ; that <- node.right
   xor rbx, rbx
   mov ebx, [rsi + object.internal.content + 8]
   shl rbx, 4
@@ -605,20 +605,20 @@ set:
   call stack.push.move
   xor edx, edx
   call stack.push.move
-  ; that = that.left
+  ; that <- that.left
   mov eax, [rbx + object.internal.content + 4]
   xor rbx, rbx
   mov ebx, eax
   shl rbx, 4
   jmp .remove.5
 .remove.6:
-  ; node.value = that.value
+  ; node.value <- that.value
   mov edx, [rbx + object.internal.content]
   mov [rsi + object.internal.content], edx
-  ; node = that
+  ; node <- that
   mov rsi, rbx
 .remove.7:
-  ; if path.len != 0: pnode = path.top().node else: pnode = nil
+  ; if path.len != 0: pnode <- path.top().node else: pnode <- nil
   xor rbx, rbx
   mov eax, ebp
   call stack.empty
@@ -631,7 +631,7 @@ set:
   shl rbx, 4
 .remove.8:
   ; now, (node.left && node.right) == nil
-  ; if node.left == nil: node = node.right else: node = node.left
+  ; if node.left == nil: node <- node.right else: node <- node.left
   mov edx, [rsi + object.internal.content + 4]
   test edx, edx
   jnz .remove.9
@@ -645,7 +645,7 @@ set:
   mov [rcx + object.content], edx
   jmp .remove.11
 .remove.10:
-  ; if dir == LEFT: pnode.left = node else: pnode.right = node
+  ; if dir == LEFT: pnode.left <- node else: pnode.right <- node
   mov eax, ebp
   call stack.top  ; it's safe; if stack is empty, ebx == nil
   xor rdi, rdi
@@ -709,7 +709,7 @@ set:
   call stack.push.move
   mov edx, 1
   call stack.push.move
-  ; node = node.right
+  ; node <- node.right
   mov eax, [rsi + object.internal.content + 8]
   xor rsi, rsi
   mov esi, eax
@@ -729,7 +729,7 @@ set:
   call stack.push.move
   xor edx, edx
   call stack.push.move
-  ; node = node.left
+  ; node <- node.left
   mov eax, [rsi + object.internal.content + 4]
   xor rsi, rsi
   mov esi, eax
@@ -756,7 +756,7 @@ set:
   call stack.push.move
   mov edx, 1
   call stack.push.move
-  ; that = node.right
+  ; that <- node.right
   xor rbx, rbx
   mov ebx, [rsi + object.internal.content + 8]
   shl rbx, 4
@@ -772,20 +772,20 @@ set:
   call stack.push.move
   xor edx, edx
   call stack.push.move
-  ; that = that.left
+  ; that <- that.left
   mov eax, [rbx + object.internal.content + 4]
   xor rbx, rbx
   mov ebx, eax
   shl rbx, 4
   jmp .remove.move.5
 .remove.move.6:
-  ; node.value = that.value
+  ; node.value <- that.value
   mov edx, [rbx + object.internal.content]
   mov [rsi + object.internal.content], edx
-  ; node = that
+  ; node <- that
   mov rsi, rbx
 .remove.move.7:
-  ; if path.len != 0: pnode = path.top().node else: pnode = nil
+  ; if path.len != 0: pnode <- path.top().node else: pnode <- nil
   xor rbx, rbx
   mov eax, ebp
   call stack.empty
@@ -798,7 +798,7 @@ set:
   shl rbx, 4
 .remove.move.8:
   ; now, (node.left && node.right) == nil
-  ; if node.left == nil: node = node.right else: node = node.left
+  ; if node.left == nil: node <- node.right else: node <- node.left
   mov edx, [rsi + object.internal.content + 4]
   test edx, edx
   jnz .remove.move.9
@@ -812,7 +812,7 @@ set:
   mov [rcx + object.content], edx
   jmp .remove.move.11
 .remove.move.10:
-  ; if dir == LEFT: pnode.left = node else: pnode.right = node
+  ; if dir == LEFT: pnode.left <- node else: pnode.right <- node
   mov eax, ebp
   call stack.top  ; it's safe; if stack is empty, ebx == nil
   xor rdi, rdi
@@ -856,9 +856,9 @@ set:
   call stack.empty
   test eax, eax
   jnz .remove.balance.10
-  ; new-node = nil
+  ; new-node <- nil
   xor rsi, rsi
-  ; pnode, dir = path.pop()
+  ; pnode, dir <- path.pop()
   mov eax, ecx
   call stack.pop.move
   mov edx, eax
@@ -881,12 +881,12 @@ set:
   shl rdx, 4
   cmp byte [rdx + object.internal.padding], 0
   jnl .remove.balance.2
-  ; pnode.left = rotate.left pnode.left
+  ; pnode.left <- rotate.left pnode.left
   mov rax, rdx
   call .rotate.left
   shr rax, 4
   mov [rbx + object.internal.content + 4], eax
-  ; new-node = rotate.right pnode
+  ; new-node <- rotate.right pnode
   mov rax, rbx
   call .rotate.right
   mov rsi, rax
@@ -894,18 +894,18 @@ set:
   call .balance.update
   jmp .remove.balance.8
 .remove.balance.2:
-  ; new-node = rotate.right pnode
+  ; new-node <- rotate.right pnode
   mov rax, rbx
   call .rotate.right
   mov rsi, rax
-  ; if new-node.balance == 0: new-node.balance = -1; pnode.balance = 1
+  ; if new-node.balance == 0: new-node.balance <- -1; pnode.balance <- 1
   cmp byte [rax + object.internal.padding], 0
   jne .remove.balance.3
   mov byte [rax + object.internal.padding], -1
   mov byte [rbx + object.internal.padding], 1
   jmp .remove.balance.8
 .remove.balance.3:
-  ; else: new-node.balance = 0; pnode.balance = 0
+  ; else: new-node.balance <- 0; pnode.balance <- 0
   mov byte [rax + object.internal.padding], 0
   mov byte [rbx + object.internal.padding], 0
   jmp .remove.balance.8
@@ -919,12 +919,12 @@ set:
   shl rdx, 4
   cmp byte [rdx + object.internal.padding], 0
   jng .remove.balance.5
-  ; pnode.right = rotate.right pnode.right
+  ; pnode.right <- rotate.right pnode.right
   mov rax, rdx
   call .rotate.right
   shr rax, 4
   mov [rbx + object.internal.content + 8], eax
-  ; new-node = rotate.left pnode
+  ; new-node <- rotate.left pnode
   mov rax, rbx
   call .rotate.left
   mov rsi, rax
@@ -932,18 +932,18 @@ set:
   call .balance.update
   jmp .remove.balance.8
 .remove.balance.5:
-  ; new-node = rotate.left pnode
+  ; new-node <- rotate.left pnode
   mov rax, rbx
   call .rotate.left
   mov rsi, rax
-  ; if new-node.balance == 0: new-node.balance = 1; pnode.balance = -1
+  ; if new-node.balance == 0: new-node.balance <- 1; pnode.balance <- -1
   cmp byte [rax + object.internal.padding], 0
   jne .remove.balance.6
   mov byte [rax + object.internal.padding], 1
   mov byte [rbx + object.internal.padding], -1
   jmp .remove.balance.8
 .remove.balance.6:
-  ; else: new-node.balance = 0; pnode.balance = 0
+  ; else: new-node.balance <- 0; pnode.balance <- 0
   mov byte [rax + object.internal.padding], 0
   mov byte [rbx + object.internal.padding], 0
   jmp .remove.balance.8
@@ -964,7 +964,7 @@ set:
   mov edi, esi
   jmp .remove.balance.10
 .remove.balance.9:
-  ; gnode, gdir = path.top()
+  ; gnode, gdir <- path.top()
   mov eax, ecx
   mov rdx, 1
   call stack.nth
@@ -973,7 +973,7 @@ set:
   shl rbx, 4
   mov eax, ecx
   call stack.top
-  ; if gdir == LEFT: gnode.left = new-node else: gnode.right = new-node
+  ; if gdir == LEFT: gnode.left <- new-node else: gnode.right <- new-node
   xor rdx, rdx
   mov edx, eax
   mov rax, rsi
@@ -994,14 +994,14 @@ set:
 .rotate.right:
   push rcx
   push rdx
-  ; lnode = node.left
+  ; lnode <- node.left
   xor rdx, rdx
   mov edx, [rax + object.internal.content + 4]
   shl rdx, 4
-  ; node.left = lnode.right
+  ; node.left <- lnode.right
   mov ecx, [rdx + object.internal.content + 8]
   mov [rax + object.internal.content + 4], ecx
-  ; lnode.right = node
+  ; lnode.right <- node
   shr rax, 4
   mov [rdx + object.internal.content + 8], eax
   ; return lnode
@@ -1014,14 +1014,14 @@ set:
 .rotate.left:
   push rcx
   push rdx
-  ; rnode = node.right
+  ; rnode <- node.right
   xor rdx, rdx
   mov edx, [rax + object.internal.content + 8]
   shl rdx, 4
-  ; node.right = rnode.left
+  ; node.right <- rnode.left
   mov ecx, [rdx + object.internal.content + 4]
   mov [rax + object.internal.content + 8], ecx
-  ; rnode.left = node
+  ; rnode.left <- node
   shr rax, 4
   mov [rdx + object.internal.content + 4], eax
   ; return rnode
