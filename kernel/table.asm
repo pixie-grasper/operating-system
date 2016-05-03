@@ -257,7 +257,7 @@ table:
   call stack.empty
   test eax, eax
   jnz .newindex.insert.8
-  ; pnode, pdir = path.pop()
+  ; pnode, pdir <- path.pop()
   mov eax, ebp
   call stack.pop.move
   xor rdx, rdx
@@ -357,7 +357,7 @@ table:
   ; break
   jmp .newindex.insert.7
 .newindex.insert.6:
-  ; new-node = rotate.left pnode
+  ; new-node <- rotate.left pnode
   mov rax, rcx
   call .rotate.left
   mov rsi, rax
@@ -625,7 +625,7 @@ table:
   call .balance.update
   jmp .newindex.remove.17
 .newindex.remove.11:
-  ; new-node = rotate.right pnode
+  ; new-node <- rotate.right pnode
   mov rax, rdi
   call .rotate.right
   mov rsi, rax
@@ -808,14 +808,14 @@ table:
   push rdx
   push rsi
   push rdi
-  ; rnode = node.right
+  ; rnode <- node.right
   xor rdx, rdx
   mov edx, [rax + object.internal.content + 8]
   shl rdx, 4
-  ; node.right = rnode.left
+  ; node.right <- rnode.left
   mov ecx, [rdx + object.internal.content + 4]
   mov [rax + object.internal.content + 8], ecx
-  ; rnode.left = node
+  ; rnode.left <- node
   mov rsi, rax
   shr rsi, 4
   mov [rdx + object.internal.content + 4], esi
