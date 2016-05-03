@@ -572,6 +572,8 @@ set:
   jmp .remove.11  ; if not found: dispose stack and return.
 .remove.4:
   ; [si:o.i.c] == value
+  mov eax, [rsi + object.internal.content]
+  call objects.unref
   ; if it has childlen:
   mov eax, [rsi + object.internal.content + 4]
   test eax, eax
@@ -611,8 +613,6 @@ set:
   jmp .remove.5
 .remove.6:
   ; node.value = that.value
-  mov eax, [rsi + object.internal.content]
-  call objects.unref
   mov edx, [rbx + object.internal.content]
   mov [rsi + object.internal.content], edx
   ; node = that
