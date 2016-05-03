@@ -444,8 +444,320 @@ table:
   ; b: address of the table
   ; si: address of the current node
   ; bp: stack id
-  ; TODO: implement
+  xor rdx, rdx
+  mov edx, [rsi + object.internal.content]
+  shl rdx, 4
+  xor rax, rax
+  mov eax, [rdx + object.internal.content]
+  call objects.unref
+  mov eax, [rdx + object.internal.content + 4]
+  call objects.unref
+  ; if it has childlen:
+  mov eax, [rsi + object.internal.content + 4]
+  test eax, eax
+  jz .newindex.remove.4
+  mov eax, [rsi + object.internal.content + 8]
+  test eax, eax
+  jz .newindex.remove.4
+  ; find node.right.left.left.left. ... .left that is not nil
+  ; push node, true
+  mov eax, ebp
+  mov rdx, rsi
+  shr rdx, 4
+  call stack.push.move
+  mov edx, 1
+  call stack.push.move
+  ; that <- node.right
+  xor rdi, rdi
+  mov edi, [rsi + object.internal.content + 8]
+  shl rdi, 4
+.newindex.remove.2:
+  ; while that.left != nil:
+  mov eax, [rdi + object.internal.content + 4]
+  test eax, eax
+  jz .newindex.remove.3
+  ; push that, false
+  mov eax, ebp
+  mov rdx, rdi
+  shr rdx, 4
+  call stack.push.move
+  xor edx, edx
+  call stack.push.move
+  ; that <- that.left
+  mov eax, [rdi + object.internal.content + 4]
+  xor rdi, rdi
+  mov edi, eax
+  shl rdi, 4
+  jmp .newindex.remove.2
+.newindex.remove.3:
+  ; node.key, node.value <- that.key, that.value
+  xor rax, rax
+  mov eax, [rdi + object.internal.content]
+  shl rax, 4
+  xor rcx, rcx
+  mov ecx, [rsi + object.internal.content]
+  shl rcx, 4
+  mov edx, [rax + object.internal.content]
+  mov [rcx + object.internal.content], edx
+  mov edx, [rax + object.internal.content + 4]
+  mov [rcx + object.internal.content + 4], edx
+  ; node <- that
+  mov rsi, rdi
+.newindex.remove.4:
+  ; if path.len != 0: pnode <- path.top().node else: pnode <- nil
+  xor rdi, rdi
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jnz .newindex.remove.5
+  mov eax, ebp
+  mov rdx, 1
+  call stack.nth
+  mov edi, eax
+  shl rdi, 4
+.newindex.remove.5:
+  ; now, (node.left && node.right) == nil
+  ; if node.left == nil: node <- node.right else: node <- node.left
+  xor rdx, rdx
+  mov edx, [rsi + object.internal.content + 4]
+  test edx, edx
+  jnz .newindex.remove.6
+  mov edx, [rsi + object.internal.content + 8]
+.newindex.remove.6:
+  xor rax, rax
+  mov eax, [rsi + object.internal.content]
+  shl rax, 4
+  call objects.dispose.raw
+  mov rax, rsi
+  call objects.dispose.raw
+  ; if root-node removed: root-node <- node
+  test rdi, rdi
+  jnz .newindex.remove.7
+  mov [rbx + object.content], edx
   jmp .newindex.5
+  ; table.node <- nil
+.newindex.remove.7:
+  ; if path.top().dir == LEFT: pnode.left <- node else: pnode.right <- node
+  mov eax, ebp
+  call stack.top
+  xor rcx, rcx
+  mov ecx, eax
+  mov eax, [rdi + object.internal.content + 4 + rcx * 4]
+  mov [rdi + object.internal.content + 4 + rcx * 4], edx
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
+  xor rax, rax
+  mov eax, [rsi + object.internal.content]
+  shl rax, 4
+  call objects.dispose.raw
+  mov rax, rsi
+  call objects.dispose.raw
+.newindex.remove.8:
+  ; b: address of the table
+  ; si: address of the new-node
+  ; di: address of the pnode
+  ; bp: stack id indicates path
+  ; while path.len != 0:
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jnz .newindex.5
+  ; new-node <- nil
+  xor rsi, rsi
+  ; pnode, pdir <- path.pop()
+  mov eax, ebp
+  call stack.pop.move
+  mov edx, eax
+  mov eax, ebp
+  call stack.pop.move
+  xor rdi, rdi
+  mov edi, eax
+  shl rdi, 4
+  ; if pdir == LEFT: pnode.balance-- else: pnode.balance++
+  add edx, edx
+  dec edx
+  add [rdi + object.internal.padding], dl
+  ; pnode.weight <- pnode.left.weight + pnode.right.weight + 1
+  ; if pnode.* == nil: pnode.*.weight == 0
+  xor edx, edx
+  xor rax, rax
+  mov eax, [rdi + object.internal.content + 4]
+  shl rax, 4
+  jz .newindex.remove.9
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content]
+  shl rcx, 4
+  add edx, [rcx + object.internal.content + 8]
+.newindex.remove.9:
+  xor rax, rax
+  mov eax, [rdi + object.internal.content + 8]
+  shl rax, 4
+  jz .newindex.remove.10
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content]
+  shl rcx, 4
+  add edx, [rcx + object.internal.content + 8]
+.newindex.remove.10:
+  inc edx
+  xor rax, rax
+  mov eax, [rdi + object.internal.content]
+  shl rax, 4
+  mov [rax + object.internal.content + 8], edx
+  ; if pnode.balance > 1:
+  mov dl, [rdi + object.internal.padding]
+  cmp dl, 1
+  jng .newindex.remove.13
+  ; if pnode.left.balance < 0:
+  xor rax, rax
+  mov eax, [rdi + object.internal.content + 4]
+  shl rax, 4
+  cmp byte [rax + object.internal.padding], 0
+  jnl .newindex.remove.11
+  ; pnode.left <- rotate.left pnode.left
+  call .rotate.left
+  shr rax, 4
+  mov [rdi + object.internal.content + 4], eax
+  ; new-node <- rotate.right pnode
+  mov rax, rdi
+  call .rotate.right
+  mov rsi, rax
+  ; balance.update
+  call .balance.update
+  jmp .newindex.remove.17
+.newindex.remove.11:
+  ; new-node = rotate.right pnode
+  mov rax, rdi
+  call .rotate.right
+  mov rsi, rax
+  ; if new-node.balance == 0: new-node.balance <- -1; pnode.balance <- 1
+  cmp byte [rax + object.internal.padding], 0
+  jne .newindex.remove.12
+  mov byte [rax + object.internal.padding], -1
+  mov byte [rdi + object.internal.padding], 1
+  jmp .newindex.remove.17
+.newindex.remove.12:
+  ; else: new-node.balance <- 0; pnode.balance <- 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rdi + object.internal.padding], 0
+  jmp .newindex.remove.17
+.newindex.remove.13:
+  ; elif pnode.balance < -1:
+  cmp dl, -1
+  jnl .newindex.remove.16
+  ; if pnode.right.balance > 0:
+  xor rax, rax
+  mov eax, [rdi + object.internal.content + 8]
+  shl rax, 4
+  cmp byte [rax + object.internal.padding], 0
+  jng .newindex.remove.14
+  ; pnode.right <- rotate.right pnode.right
+  call .rotate.right
+  shr rax, 4
+  mov [rdi + object.internal.content + 8], eax
+  ; new-node <- rotate.left pnode
+  mov rax, rdi
+  call .rotate.left
+  mov rsi, rax
+  ; balance.update
+  call .balance.update
+  jmp .newindex.remove.17
+.newindex.remove.14:
+  ; new-node <- rotate.left pnode
+  mov rax, rdi
+  call .rotate.left
+  mov rsi, rax
+  ; if new-node.balance == 0: new-node.balance <- 1; pnode.balance <- -1
+  cmp byte [rax + object.internal.padding], 0
+  jne .newindex.remove.15
+  mov byte [rax + object.internal.padding], 1
+  mov byte [rdi + object.internal.padding], -1
+  jmp .newindex.remove.17
+.newindex.remove.15:
+  ; else: new-node.balance <- 0; pnode.balance <- 0
+  mov byte [rax + object.internal.padding], 0
+  mov byte [rdi + object.internal.padding], 0
+  jmp .newindex.remove.17
+.newindex.remove.16:
+  ; elif pnode.balance != 0: break
+  cmp dl, 0
+  jne .newindex.remove.19
+.newindex.remove.17:
+  ; if new-node != nil:
+  test rsi, rsi
+  jz .newindex.remove.8
+  ; if path.len == 0:
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jz .newindex.remove.18
+  ; table.node <- new-node
+  shr rsi, 4
+  mov [rbx + object.content], esi
+  ; break
+  jmp .newindex.5
+.newindex.remove.18:
+  ; gnode, gdir <- path.top()
+  mov eax, ebp
+  mov rdx, 1
+  call stack.nth
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  mov eax, ebp
+  call stack.top
+  xor rcx, rcx
+  mov ecx, eax
+  ; if gdir == LEFT: gnode.left <- new-node else: gnode.right <- new-node
+  mov rax, rsi
+  shr rsi, 4
+  mov [rdx + object.internal.content + 4 + rcx * 4], esi
+  ; if new-node.balance != 0: break
+  cmp byte [rax + object.internal.padding], 0
+  je .newindex.remove.8
+.newindex.remove.19:
+  ; di: address of the pnode
+  ; bp: stack id indicates path
+  ; while path.len != 0:
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jnz .newindex.5
+  ; pnode <- path.pop().node
+  mov eax, ebp
+  call stack.pop.move
+  mov eax, ebp
+  call stack.pop.move
+  xor rdi, rdi
+  mov edi, eax
+  shl rdi, 4
+  ; pnode.weight <- pnode.left.weight + pnode.right.weight + 1
+  ; if pnode.* == nil: pnode.*.weight == 0
+  xor edx, edx
+  xor rax, rax
+  mov eax, [rdi + object.internal.content + 4]
+  shl rax, 4
+  jz .newindex.remove.20
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content]
+  shl rcx, 4
+  add edx, [rcx + object.internal.content + 8]
+.newindex.remove.20:
+  xor rax, rax
+  mov eax, [rdi + object.internal.content + 8]
+  shl rax, 4
+  jz .newindex.remove.21
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content]
+  shl rcx, 4
+  add edx, [rcx + object.internal.content + 8]
+.newindex.remove.21:
+  inc edx
+  xor rax, rax
+  mov eax, [rdi + object.internal.content]
+  shl rax, 4
+  mov [rax + object.internal.content + 8], edx
+  jmp .newindex.remove.19
 
   ; in/out: a = address of the node
   ; note: node.left has to exist
