@@ -374,10 +374,9 @@ table:
   test eax, eax
   jz .newindex.insert.9
 .newindex.insert.8:
-  mov rcx, rsi
   shr rsi, 4
   mov [rbx + object.content], esi
-  jmp .newindex.insert.10
+  jmp .newindex.5
 .newindex.insert.9:
   ; else:
   ; pnode, pdir <- path.pop()
