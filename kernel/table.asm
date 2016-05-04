@@ -176,11 +176,12 @@ table:
   ; if node.right != nil:
   xor rdi, rdi
   mov edi, [rcx + object.internal.content + 8]
-  mov edx, edi
   shl rdi, 4
   jz .iterator.succ.2
   ; push node, true
   mov eax, ebp
+  mov rdx, rcx
+  shr rdx, 4
   call stack.push.move
   mov edx, 1
   call stack.push.move
@@ -190,11 +191,12 @@ table:
   ; while node.left != nil:
   xor rdi, rdi
   mov edi, [rcx + object.internal.content + 4]
-  mov edx, edi
   shl rdi, 4
   jz .iterator.succ.3
   ; push node, false
   mov eax, ebp
+  mov rdx, rcx
+  shr rdx, 4
   call stack.push.move
   xor edx, edx
   call stack.push.move
