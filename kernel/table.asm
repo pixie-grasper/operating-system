@@ -6,6 +6,8 @@
 ;     node = {internal-node, left | nil, right | nil}, extra-field = balance: 8 bits
 ;     internal-node = {key, value, weight}
 ;     balance = -2 .. 2 (includes internal-state-value)
+;   iterator = {current-node, stack indicates path}, extra-field = end: 1 bit
+;     end = 0: not end, 1: end
 
 table:
 .new:
@@ -18,6 +20,14 @@ table:
   push rax
   shr rax, 4
   call .clear
+  pop rax
+  ret
+
+.iterator.dispose.raw:
+  push rax
+  mov eax, [rax + object.content + 4]
+  call stack.clear.move
+  call objects.unref
   pop rax
   ret
 
@@ -69,6 +79,171 @@ table:
 .clear.4:
   call objects.dispose.raw
   ret
+
+  ; @const
+  ; in: a = table id
+  ; out: a = table.iterator id
+.begin:
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  call objects.new.raw
+  mov byte [rax + object.class], object.stack.iterator
+  mov rsi, rax
+  call stack.new
+  mov [rsi + object.content + 4], eax
+  xor rcx, rcx
+  mov ecx, [rdx + object.content]
+  shl rcx, 4
+  jz .begin.2
+  mov edi, eax
+.begin.1:
+  ; c: address of the current node
+  ; si: address of the iterator
+  ; di: stack id
+  ; while node.left != nil:
+  xor rax, rax
+  mov eax, [rcx + object.internal.content + 4]
+  shl rax, 4
+  jz .begin.2
+  ; push node, false
+  mov eax, edi
+  mov rdx, rcx
+  shr rdx, 4
+  call stack.push.move
+  xor rdx, rdx
+  call stack.push.move
+  ; node <- node.left
+  mov edx, [rcx + object.internal.content + 4]
+  shl rdx, 4
+  mov rcx, rdx
+  jmp .begin.1
+.begin.2:
+  shr rcx, 4
+  mov [rsi + object.content], ecx
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  ret
+
+  ; in: a = table.iterator id
+  ; out: a = key id
+  ; out: d = value id
+.iterator.deref:
+  push rcx
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  xor rdx, rdx
+  mov edx, [rax + object.content]
+  shl rdx, 4
+  xor rcx, rcx
+  mov ecx, [rdx + object.internal.content]
+  shl rcx, 4
+  mov eax, [rcx + object.internal.content]
+  mov edx, [rcx + object.internal.content + 4]
+  pop rcx
+  ret
+
+  ; in/out: a = table.iterator id
+.iterator.succ:
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  push rbp
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
+  ; if iterator ended: return it
+  cmp byte [rsi + object.padding], 0
+  jne .iterator.succ.5
+  xor rcx, rcx
+  mov ecx, [rsi + object.content]
+  shl rcx, 4
+  mov ebp, [rsi + object.content + 4]
+  ; c: address of the current node
+  ; si: address of the iterator
+  ; bp: stack id indicates path
+  ; if node.right != nil:
+  xor rdi, rdi
+  mov edi, [rcx + object.internal.content + 8]
+  mov edx, edi
+  shl rdi, 4
+  jz .iterator.succ.2
+  ; push node, true
+  mov eax, ebp
+  call stack.push.move
+  mov edx, 1
+  call stack.push.move
+  ; node <- node.right
+  mov rcx, rdi
+.iterator.succ.1:
+  ; while node.left != nil:
+  xor rdi, rdi
+  mov edi, [rcx + object.internal.content + 4]
+  mov edx, edi
+  shl rdi, 4
+  jz .iterator.succ.3
+  ; push node, false
+  mov eax, ebp
+  call stack.push.move
+  xor edx, edx
+  call stack.push.move
+  ; node <- node.left
+  mov rcx, rdi
+  jmp .iterator.succ.1
+.iterator.succ.2:
+  ; else:
+  ; while path.len != 0:
+  mov eax, ebp
+  call stack.empty
+  test eax, eax
+  jz .iterator.succ.4
+  ; node, pdir <- path.pop()
+  mov eax, ebp
+  call stack.pop.move
+  mov edx, eax
+  mov eax, ebp
+  call stack.pop.move
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  ; if pdir == LEFT:
+  test edx, edx
+  jnz .iterator.succ.2
+.iterator.succ.3:
+  ; iterator.node <- current-node
+  shr rcx, 4
+  mov [rsi + object.content], ecx
+  jmp .iterator.succ.5
+.iterator.succ.4:
+  ; if old-node pointed the maximum-key: return ended iterator
+  mov byte [rsi + object.padding], 1
+.iterator.succ.5:
+  pop rbp
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  ret
+
+  ; in: a = table.iterator id
+.iterator.isend:
+  push rdx
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  ; if iterator ended: return it
+  cmp byte [rdx + object.padding], 0
+  pop rdx
+  je return.false
+  jmp return.true
 
   ; @const
   ; in: a = table id

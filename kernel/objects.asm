@@ -22,6 +22,7 @@ endstruc
 %define object.octetbuffer 4
 %define object.set 5
 %define object.table 6
+%define object.table.iterator 7
 
 %include "integer.asm"
 %include "octet-buffer.asm"
