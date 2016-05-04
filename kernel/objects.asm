@@ -166,6 +166,14 @@ objects:
   je .unref.stack
   cmp dl, object.stack.iterator
   je .unref.stack.iterator
+  cmp dl, object.octetbuffer
+  je .unref.octetbuffer
+  cmp dl, object.set
+  je .unref.set
+  cmp dl, object.table
+  je .unref.table
+  cmp dl, object.table.iterator
+  je .unref.table.iterator
 .unref.2:
   call .dispose.raw
 .unref.3:
@@ -181,6 +189,18 @@ objects:
   jmp .unref.2
 .unref.stack.iterator:
   call stack.iterator.dispose.raw
+  jmp .unref.2
+.unref.octetbuffer:
+  call octet_buffer.dispose.raw
+  jmp .unref.2
+.unref.set:
+  call set.dispose.raw
+  jmp .unref.2
+.unref.table:
+  call table.dispose.raw
+  jmp .unref.2
+.unref.table.iterator:
+  call table.iterator.dispose.raw
   jmp .unref.2
 
   ; in: a = object address
