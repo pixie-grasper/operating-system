@@ -22,16 +22,18 @@ integer:
 .dispose.raw:
   ret
 
-  ; in: a = object id
-  ; out: d = int:64
+  ; in: a = integer id
+  ; out: a = int:64
 .get:
+  push rdx
   xor rdx, rdx
   mov edx, eax
   shl rdx, 4
-  mov rdx, [rdx + object.content]
+  mov rax, [rdx + object.content]
+  pop rdx
   ret
 
-  ; in: a = object id
+  ; in: a = integer id
   ; in: d = int:64
 .set:
   push rcx
