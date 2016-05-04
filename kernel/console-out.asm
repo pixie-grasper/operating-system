@@ -175,6 +175,30 @@ console_out:
   pop rax
   ret
 
+.printcolon@s:
+  push rax
+  push rcx
+  push rdx
+  push rdi
+  mov rdi, .lock
+  call atomic.lock
+  mov edi, [.current.pos]
+  mov word [edi], 0x073a
+  add edi, 2
+  cmp edi, 0x000b8000 + 80 * 25 * 2
+  jb .printcolon@s.1
+  call .scroll
+.printcolon@s.1:
+  mov [.current.pos], edi
+  call .cursor.set
+  mov rdi, .lock
+  call atomic.unlock
+  pop rdi
+  pop rdx
+  pop rcx
+  pop rax
+  ret
+
   ; in: a = signed integer
 .printi:
   xor rdx, rdx
