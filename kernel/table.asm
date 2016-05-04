@@ -478,6 +478,7 @@ table:
   mov eax, [rcx + object.internal.content]
   shl rax, 4
   mov [rax + object.internal.content + 8], edx
+  mov rsi, rcx
   ; if pnode.balance == 0: break
   mov dl, [rcx + object.internal.padding]
   test dl, dl
