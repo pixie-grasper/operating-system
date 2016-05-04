@@ -56,6 +56,11 @@ console_out:
 
   ; in: si = address of asciz string
 .prints:
+  push rax
+  push rcx
+  push rdx
+  push rsi
+  push rdi
   mov rdi, .lock
   call atomic.lock
   mov ah, 0x07
@@ -84,6 +89,11 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rax
   ret
 .prints.scroll:
   call .scroll
@@ -176,37 +186,42 @@ console_out:
   neg rax
   not ecx
 .printi.1:
+  jz .printi.7
+.printi.2:
   test rax, rax
-  jz .printi.2
+  jz .printi.3
   div rdi
   add edx, 0x0730
   push rdx
   xor edx, edx
-  jmp .printi.1
-.printi.2:
-  test ecx, ecx
-  jns .printi.3
-  push 0x072d
+  jmp .printi.2
 .printi.3:
+  test ecx, ecx
+  jns .printi.4
+  push 0x072d
+.printi.4:
   mov rdi, .lock
   call atomic.lock
   mov edi, [.current.pos]
-.printi.4:
+.printi.5:
   pop rax
   test eax, eax
-  jz .printi.5
+  jz .printi.6
   mov [edi], ax
   add edi, 2
   cmp edi, 0x000b8000 + 80 * 25 * 2
-  jb .printi.4
+  jb .printi.5
   call .scroll
-  jmp .printi.4
-.printi.5:
+  jmp .printi.5
+.printi.6:
   mov [.current.pos], edi
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
   ret
+.printi.7:
+  push 0x0730
+  jmp .printi.4
 
 .printi@s:
   push rax
