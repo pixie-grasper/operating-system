@@ -125,6 +125,8 @@ table:
 .begin.2:
   shr rcx, 4
   mov [rsi + object.content], ecx
+  shr rsi, 4
+  mov eax, esi
   pop rdi
   pop rsi
   pop rdx
@@ -140,7 +142,7 @@ table:
   mov ecx, eax
   shl rcx, 4
   xor rdx, rdx
-  mov edx, [rax + object.content]
+  mov edx, [rcx + object.content]
   shl rdx, 4
   xor rcx, rcx
   mov ecx, [rdx + object.internal.content]
@@ -150,8 +152,9 @@ table:
   pop rcx
   ret
 
-  ; in/out: a = table.iterator id
+  ; in: a = table.iterator id
 .iterator.succ:
+  push rax
   push rcx
   push rdx
   push rsi
@@ -204,7 +207,7 @@ table:
   mov eax, ebp
   call stack.empty
   test eax, eax
-  jz .iterator.succ.4
+  jnz .iterator.succ.4
   ; node, pdir <- path.pop()
   mov eax, ebp
   call stack.pop.move
@@ -231,6 +234,7 @@ table:
   pop rsi
   pop rdx
   pop rcx
+  pop rax
   ret
 
   ; in: a = table.iterator id
@@ -239,7 +243,6 @@ table:
   xor rdx, rdx
   mov edx, eax
   shl rdx, 4
-  ; if iterator ended: return it
   cmp byte [rdx + object.padding], 0
   pop rdx
   je return.false
