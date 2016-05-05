@@ -11,18 +11,7 @@ entry:
   call console_out.prints
   call interrupts.init
   call objects.init
-  call ata.init
-  mov rsi, msg.ok
-  call console_out.prints
-  mov rsi, msg.disc
-  call console_out.prints
-  call ata.select.boot
-  jc error.failed
-  call memory.newpage@s
-  push rax
-  mov rsi, 0x11
-  call storage_device.readsector
-  jc error.failed
+  call device.init
   mov rsi, msg.ok
   call console_out.prints
   jmp end
@@ -42,9 +31,8 @@ end:
   hlt
   jmp end
 
-%include "ata.asm"
-%include "storage-device.asm"
 %include "console-out.asm"
+%include "device.asm"
 %include "descriptor-tables.asm"
 %include "memory.asm"
 %include "objects.asm"
@@ -55,6 +43,7 @@ msg:
 .ok: db 'OK.', 0x0a, 0
 .bad: db 'Failed.', 0
 .nem: db 'Not enough memory.', 0
+.device.found: db ' Device(s) found.', 0
 
 ; one page for the GDT, one for the IDT, one for the TLS
 global_page_size equ 3

@@ -1,37 +1,83 @@
-%ifndef ATA_ASM_
-%define ATA_ASM_
+%ifndef IDE_ASM_
+%define IDE_ASM_
 
-ata:
+ide:
+  ; in: a = table id
+  ; in/out: d = int:64 next entry number
 .init:
+  push rax
+  push rbx
+  push rcx
+  push rsi
+  push rdi
+  push rbp
+  mov esi, eax
+  mov rdi, rdx
   ; first, detect device
-  mov edi, .info0
+  mov ecx, 0x01f0
   call .init.1
-  mov edi, .info1
+  mov ecx, 0x0170
   call .init.1
   ; then, enable interrupts
   mov al, 0x00
   mov dx, 0x03f6
   out dx, al
-  ; mov dx, 0x0376
-  ; out dx, al
   call interrupts.enable.ata
+  mov rdx, rdi
+  pop rbp
+  pop rdi
+  pop rsi
+  pop rcx
+  pop rbx
+  pop rax
   ret
+
+  ; in: c = port number
+  ; in: si = table id
+  ; in/out: di = int:64 next entry number
 .init.1:
   ; Device that command completed or power-on, hardware or software resetted,
   ; state is the HIx.
   ; so first, wait BSY = 0 & DRQ = 0
-  mov ebx, [edi + 4]
   call .wait.bsy.drq
   jc return.false
   ; then, run EXECUTE DEVICE DIAGNOSTIC command
-  lea edx, [ebx + 7]
+  lea edx, [ecx + 7]
   mov al, 0x90
   out dx, al
   ; Note that in this time, do not use IRQ-wait because device may not present.
   call .wait.bsy
   jc return.false
+  lea edx, [ecx + 6]
+  mov al, 0x00
+  out dx, al
+  call .wait.bsy.drq
+  jc .init.2
+  xor ebx, ebx
+  call .init.3
+.init.2:
+  lea edx, [ecx + 6]
+  mov al, 0x10
+  out dx, al
+  call .wait.bsy.drq
+  jc return.false
+  mov ebx, 1
+  call .init.3
+  jmp return.true
+
+  ; in: b = device number
+  ; in: c = port number
+  ; in: si = table id
+  ; in/out: di = int:64 next entry number
+.init.3:
+  ; read diagnostic code
+  lea edx, [ecx + 1]
+  in al, dx
+  and al, 0x7f
+  cmp al, 0x01
+  jne return.false
   ; read signature
-  lea edx, [ebx + 4]
+  lea edx, [ecx + 4]
   in al, dx
   test al, al
   jz .init.ata
@@ -42,52 +88,37 @@ ata:
   in al, dx
   cmp al, 0xeb
   jne return.false
-  ; to set DRDY, run IDENTIFY PACKET DEVICE command
-  call .wait.bsy.drq
-  jc return.false
-  lea edx, [ebx + 6]
-  mov al, 0x00
-  out dx, al
-  call .wait.bsy.drq
-  jc return.false
-  lea edx, [ebx + 7]
-  mov al, 0xa1
-  out dx, al
-  call .wait.bsy.ndrq
-  jc return.false
-  call memory.newpage@s
-  push rax
-  push rdi
-  mov rdi, rax
-  mov edx, ebx
-  mov ecx, 256
-  rep insw
-  pop rdi
-  pop rax
-  call memory.disposepage@s
-  mov byte [edi], 3
-  ret
+  jmp .init.4
 .init.ata:
-  mov byte [edi], 1
+  inc edx
+  in al, dx
+  test al, al
+  jne return.false
+.init.4:
+  call device.new
+  xor rdx, rdx
+  mov edx, eax
+  shl rdx, 4
+  call objects.new.chunk
+  mov [rax + object.internal.content], ecx
+  mov [rax + object.internal.content + 4], ebx
+  mov dword [rax + object.internal.content + 8], device.atapi
+  shr rax, 4
+  mov [rdx + object.content + 4], eax
+  shr rdx, 4
+  push rcx
+  mov ecx, edx
+  call integer.new
+  mov rdx, rdi
+  inc rdi
+  call integer.set
+  mov edx, eax
+  mov eax, esi
+  call table.newindex
+  mov eax, edx
+  call objects.unref
+  pop rcx
   ret
-
-.select.boot:
-  mov ax, [0x0800]
-  cmp ax, 2
-  je .select.cd
-  jmp return.false
-
-.select.cd:
-  mov ebx, .vtable.atapi
-  mov edi, .info0
-  mov eax, [edi]
-  test eax, 2
-  jnz return.true
-  mov edi, .info1
-  mov eax, [edi]
-  test eax, 2
-  jnz return.true
-  jmp return.false
 
   ; in: a = output address
   ; in: si = LBA
@@ -157,7 +188,7 @@ ata:
   jmp return.false
 
 .wait.bsy.drq:
-  lea edx, [ebx + 7]
+  lea edx, [ecx + 7]
 .wait.bsy.drq.1:
   in al, dx
   test al, 0x21  ; ERR | DF
@@ -167,7 +198,7 @@ ata:
   jmp return.true
 
 .wait.bsy:
-  lea edx, [ebx + 7]
+  lea edx, [ecx + 7]
 .wait.bsy.1:
   in al, dx
   test al, 0x21  ; ERR | DF
@@ -177,7 +208,7 @@ ata:
   jmp return.true
 
 .wait.bsy.ndrq:
-  lea edx, [ebx + 7]
+  lea edx, [ecx + 7]
 .wait.bsy.ndrq.1:
   in al, dx
   test al, 0x21  ; ERR | DF
@@ -189,7 +220,7 @@ ata:
   jmp return.true
 
 .wait.drdy:
-  lea edx, [ebx + 7]
+  lea edx, [ecx + 7]
 .wait.drdy.1:
   in al, dx
   test al, 0x21  ; ERR | DF
@@ -199,7 +230,7 @@ ata:
   jmp return.true
 
 .hlt.bsy.ndrq:
-  lea edx, [ebx + 7]
+  lea edx, [ecx + 7]
 .hlt.bsy.ndrq.1:
   hlt
   in al, dx
@@ -211,17 +242,8 @@ ata:
   jz .hlt.bsy.ndrq.1
   jmp return.true
 
-  align 4
-; bit field: 0 = Exist, 1 = Packet
-.info0:
-  dd 0
-  dd 0x01f0
-.info1:
-  dd 0
-  dd 0x0170
-
   align 8
 .vtable.atapi:
   dq .readsector
 
-%endif  ; ATA_ASM_
+%endif  ; IDE_ASM_

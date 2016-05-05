@@ -9,20 +9,22 @@ struc object
   .content resd 2
 endstruc
 
+; classes
+.system equ 0
+.integer equ 1
+.stack equ 2
+.stack.iterator equ 3
+.octetbuffer equ 4
+.set equ 5
+.table equ 6
+.table.iterator equ 7
+.device equ 8
+
 struc object.internal
   .mark resb 1
   .padding resb 3
   .content resd 3
 endstruc
-
-%define object.system 0
-%define object.integer 1
-%define object.stack 2
-%define object.stack.iterator 3
-%define object.octetbuffer 4
-%define object.set 5
-%define object.table 6
-%define object.table.iterator 7
 
 %include "integer.asm"
 %include "octet-buffer.asm"
