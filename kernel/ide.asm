@@ -79,20 +79,20 @@ ide:
   ; read signature
   lea edx, [ecx + 4]
   in al, dx
-  test al, al
+  mov ah, al
+  inc edx
+  in al, dx
+  test ah, ah
   jz .init.ata
-  cmp al, 0x14
-  jne return.false
-.init.atapi:
-  inc edx
-  in al, dx
-  cmp al, 0xeb
-  jne return.false
-  jmp .init.4
+  cmp ah, 0x14
+  je .init.atapi
+  jmp return.false
 .init.ata:
-  inc edx
-  in al, dx
   test al, al
+  jnz return.false
+  jmp .init.4
+.init.atapi:
+  cmp al, 0xeb
   jne return.false
 .init.4:
   call device.new
