@@ -90,10 +90,12 @@ ide:
 .init.ata:
   test al, al
   jnz return.false
+  mov ebp, device.ata
   jmp .init.4
 .init.atapi:
   cmp al, 0xeb
   jne return.false
+  mov ebp, device.atapi
 .init.4:
   call device.new
   xor rdx, rdx
@@ -102,7 +104,7 @@ ide:
   call objects.new.chunk
   mov [rax + object.internal.content], ecx
   mov [rax + object.internal.content + 4], ebx
-  mov dword [rax + object.internal.content + 8], device.atapi
+  mov [rax + object.internal.content + 8], ebp
   shr rax, 4
   mov [rdx + object.content + 4], eax
   shr rdx, 4
