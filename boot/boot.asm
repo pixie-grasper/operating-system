@@ -275,7 +275,7 @@ volume_descriptor_set_terminated:
   jnz .l2
 .l7:  ; find it!
   mov [int13h42hpacket.numofsector], cx
-  mov word [int13h42hpacket.segment], 0x0200
+  mov word [int13h42hpacket.segment], 0x4200
   mov ah, 0x42
   mov dl, [drive_number]
   mov si, int13h42hpacket
@@ -453,23 +453,32 @@ print:
   cpu x64
   bits 32
 enter_ia32e_mode:
-  ; first, create PML4E, PDPTE
+  ; first, create PML4E, PDPTE, PDE
   xor eax, eax
   mov dword [eax], 0x1000 + 0x0f
   mov [eax + 4], eax
   mov edi, 0x1000
-  mov ecx, 4096 / 8
+  mov ecx, 64
   mov edx, eax
-  mov eax, 0x00000000 + 0x8f  ; 1 GiB paging
+  mov eax, 0x00002000 + 0x0f
 .l1:
   mov [edi], eax
   mov [edi + 4], edx
-  add eax, 0x40000000
-  adc edx, 0
-  and edx, 0x0f  ; disable a64:a36
+  add eax, 0x00001000
   add edi, 8
   dec ecx
   jnz .l1
+  mov edi, 0x00002000
+  mov ecx, 32768
+  mov eax, 0x00000000 + 0x8f  ; 2 MiB paging
+.l2:
+  mov [edi], eax
+  mov [edi + 4], edx
+  add edi, 8
+  add eax, 0x00200000
+  adc edx, 0
+  dec ecx
+  jnz .l2
   ; then, set CR4.PAE
   mov eax, cr4
   or eax, 0x00000020
@@ -494,7 +503,7 @@ enter_ia32e_mode:
   xor ax, ax  ; null selector
   mov fs, ax
   mov gs, ax
-  jmp CodeSelector64:0x2000
+  jmp CodeSelector64:0x00042000
 
 int13h42hpacket:
   db 0x10

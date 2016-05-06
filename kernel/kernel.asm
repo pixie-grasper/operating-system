@@ -1,4 +1,4 @@
-  section .text vstart=0x2000
+  section .text vstart=0x00042000
   bits 64
 
 entry:
