@@ -16,11 +16,73 @@ device:
   mov [.table], eax
   xor rdx, rdx
   call ide.init
-  mov rax, rdx
-  call console_out.printi@s
-  mov rax, msg.device.found
-  call console_out.prints
+  mov [.num.of.device], rdx
+  call table.begin
+  mov esi, eax
+  xor rdi, rdi
+  mov di, [0x0800]
+.init.1:
+  mov eax, esi
+  call table.iterator.isend
+  jnc .init.3
+  call table.iterator.deref
+  cmp edi, 1
+  je .init.hdd
+  cmp edi, 2
+  je .init.cd
+.init.2:
+  mov eax, esi
+  call table.iterator.succ
+  jmp .init.1
+.init.3:
+  xor edx, edx
+  mov [.boot], edx
+.init.4:
+  mov eax, esi
+  call objects.unref
   ret
+.init.hdd:
+  ; find flag == 0 && type == ATA
+  mov [.boot], edx
+  xor rax, rax
+  mov eax, edx
+  shl rax, 4
+  cmp byte [rax + object.padding], 0
+  jne .init.2
+  xor rcx, rcx
+  mov ecx, [rax + object.content + 4]
+  shl rcx, 4
+  cmp dword [rcx + object.internal.content + 8], .ata
+  jne .init.2
+  jmp .init.4
+.init.cd:
+  ; find flag == 0 && type == ATAPI
+  mov [.boot], edx
+  xor rax, rax
+  mov eax, edx
+  shl rax, 4
+  cmp byte [rax + object.padding], 0
+  jne .init.2
+  xor rcx, rcx
+  mov ecx, [rax + object.content + 4]
+  shl rcx, 4
+  cmp dword [rcx + object.internal.content + 8], .atapi
+  jne .init.2
+  ; is it a CD?
+  mov eax, [rcx + object.internal.content]
+  mov edx, [rcx + object.internal.content]
+  call ide.iscd
+  jc .init.2
+  ; Lock the device
+  call ide.cd.lock
+  call ide.cd.isready
+  jc .init.cd.failed
+  ; Unlock the device
+  call ide.cd.unlock
+  jmp .init.4
+.init.cd.failed:
+  call ide.cd.unlock
+  jmp .init.2
 
 .new:
   push rdx
@@ -57,6 +119,8 @@ device:
   ret
 
 .table: dd 0
+.num.of.device: dq 0
+.boot: dd 0
 
 .ata   equ 0
 .atapi equ 1

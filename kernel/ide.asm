@@ -22,6 +22,8 @@ ide:
   mov al, 0x00
   mov dx, 0x03f6
   out dx, al
+  mov dx, 0x0376
+  out dx, al
   call interrupts.enable.ata
   mov rdx, rdi
   pop rbp
@@ -121,6 +123,194 @@ ide:
   call objects.unref
   pop rcx
   ret
+
+  ; in: a = port number
+  ; in: d = device number
+.iscd:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  mov ecx, eax
+  mov ebx, edx
+  shl ebx, 4
+  call .wait.bsy.drq
+  jc .iscd.failed
+  ; first, select device
+  lea edx, [ecx + 6]
+  mov al, bl
+  out dx, al
+  call .wait.bsy.drq
+  ; then, send PACKET Command
+  lea edx, [ecx + 1]
+  mov al, 0x00
+  out dx, al
+  inc edx
+  out dx, al
+  add edx, 2
+  out dx, al
+  mov al, 4096 / 256
+  inc edx
+  out dx, al
+  lea edx, [ecx + 7]
+  mov al, 0xa0
+  out dx, al
+  call .wait.bsy.ndrq
+  jc .iscd.failed
+  ; then, create packet and send it
+  xor edx, edx
+  sub rsp, 16
+  mov [rsp], edx
+  mov [rsp + 4], edx
+  mov [rsp + 8], edx
+  mov byte [rsp], 0x12  ; Inquiry Command
+  mov byte [rsp + 4], 96
+  mov rsi, rsp
+  mov edx, ecx
+  mov ecx, 6
+  rep outsw
+  add rsp, 16
+  mov ecx, edx
+  call .hlt.bsy.ndrq
+  jc .iscd.failed
+  call memory.newpage@s
+  mov rdi, rax
+  mov edx, ecx
+  mov ecx, 96 / 2
+  rep insw
+  mov ebx, [rax]
+  and ebx, 0x1f
+  call memory.disposepage@s
+  cmp ebx, 5
+  jne .iscd.failed
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.true
+.iscd.failed:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.false
+
+  ; in: a = port number
+  ; in: d = device number
+.cd.lock:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  mov ecx, eax
+  mov ebx, edx
+  shl ebx, 4
+  call .wait.bsy.drq
+  jc .cd.lock.end
+  ; first, select device
+  lea edx, [ecx + 6]
+  mov al, bl
+  out dx, al
+  call .wait.bsy.drq
+  ; then, send PACKET Command
+  lea edx, [ecx + 1]
+  mov al, 0x00
+  out dx, al
+  inc edx
+  out dx, al
+  add edx, 2
+  out dx, al
+  inc edx
+  out dx, al
+  lea edx, [ecx + 7]
+  mov al, 0xa0
+  out dx, al
+  call .wait.bsy.ndrq
+  jc .cd.lock.end
+  ; then, create packet and send it
+  xor edx, edx
+  sub rsp, 16
+  mov [rsp], edx
+  mov [rsp + 4], edx
+  mov [rsp + 8], edx
+  mov byte [rsp], 0x1e  ; Prevent medium removal Command
+  mov byte [rsp + 4], 1
+  mov rsi, rsp
+  mov edx, ecx
+  mov ecx, 6
+  rep outsw
+  add rsp, 16
+.cd.lock.end:
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  ret
+
+  ; in: a = port number
+  ; in: d = device number
+.cd.unlock:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  mov ecx, eax
+  mov ebx, edx
+  shl ebx, 4
+  call .wait.bsy.drq
+  jc .cd.unlock.end
+  ; first, select device
+  lea edx, [ecx + 6]
+  mov al, bl
+  out dx, al
+  call .wait.bsy.drq
+  ; then, send PACKET Command
+  lea edx, [ecx + 1]
+  mov al, 0x00
+  out dx, al
+  inc edx
+  out dx, al
+  add edx, 2
+  out dx, al
+  inc edx
+  out dx, al
+  lea edx, [ecx + 7]
+  mov al, 0xa0
+  out dx, al
+  call .wait.bsy.ndrq
+  jc .cd.unlock.end
+  ; then, create packet and send it
+  xor edx, edx
+  sub rsp, 16
+  mov [rsp], edx
+  mov [rsp + 4], edx
+  mov [rsp + 8], edx
+  mov byte [rsp], 0x1e  ; Allow medium removal Command
+  mov rsi, rsp
+  mov edx, ecx
+  mov ecx, 6
+  rep outsw
+  add rsp, 16
+.cd.unlock.end:
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  ret
+
+  ; TODO: implement
+.cd.isready:
+  jmp return.true
 
   ; in: a = output address
   ; in: si = LBA
