@@ -18,7 +18,7 @@ device:
   call ide.init
   mov rax, rdx
   call console_out.printi@s
-  mov rsi, msg.device.found
+  mov rax, msg.device.found
   call console_out.prints
   ret
 

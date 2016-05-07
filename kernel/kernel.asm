@@ -7,23 +7,23 @@ entry:
   jc error.notenoughmemory
   call descriptor_tables.init
   call console_out.init
-  mov rsi, msg.initializing
+  mov rax, msg.initializing
   call console_out.prints
   call interrupts.init
   call objects.init
   call device.init
-  mov rsi, msg.ok
+  mov rax, msg.ok
   call console_out.prints
   jmp end
 
 error:
 .notenoughmemory:
-  mov rsi, msg.nem
+  mov rax, msg.nem
   call console_out.prints@us  ; console_out is not initialized, use unsafe function
   jmp end
 
 .failed:
-  mov rsi, msg.bad
+  mov rax, msg.bad
   call console_out.prints
   jmp end
 

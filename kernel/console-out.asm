@@ -36,8 +36,9 @@ console_out:
   out dx, al
   ret
 
-  ; in: si = address of asciz string
+  ; in: a = address of asciz string
 .prints@us:
+  mov rsi, rax
   mov rdi, .lock
   call atomic.lock
   mov ah, 0x07
@@ -54,13 +55,14 @@ console_out:
   call atomic.unlock
   ret
 
-  ; in: si = address of asciz string
+  ; in: a = address of asciz string
 .prints:
   push rax
   push rcx
   push rdx
   push rsi
   push rdi
+  mov rsi, rax
   mov rdi, .lock
   call atomic.lock
   mov ah, 0x07
