@@ -78,6 +78,9 @@ octet_buffer:
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
+  mov rcx, [rcx + object.content]
+  test rcx, rcx
+  jz .index.1
   mov rax, rdx
   shr rax, 10 + 10 + 10 + 12
   jnz .index.1  ; invalid index
@@ -124,6 +127,15 @@ octet_buffer:
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
+  mov rsi, [rcx + object.content]
+  test rsi, rsi
+  jnz .newindex.1
+  call memory.newpage@s
+  call memory.zerofill
+  mov rsi, rax
+  mov [rcx + object.content], rax
+.newindex.1:
+  mov rcx, rsi
   mov rdi, rdx
   shr rdi, 10 + 10 + 10 + 12
   jnz .newindex.nil  ; invalid index
@@ -132,39 +144,39 @@ octet_buffer:
   xor rsi, rsi
   mov esi, [rcx + rdi * 4]
   shl rsi, 4
-  jnz .newindex.1
+  jnz .newindex.2
   call memory.newpage@s
   call memory.zerofill
   mov rsi, rax
   shr rax, 4
   mov [rcx + rdi * 4], eax
-.newindex.1:
+.newindex.2:
   mov rdi, rdx
   shr rdi, 10 + 12
   and rdi, 0x03ff
   xor rcx, rcx
   mov ecx, [rsi + rdi * 4]
   shl rcx, 4
-  jnz .newindex.2
+  jnz .newindex.3
   call memory.newpage@s
   call memory.zerofill
   mov rcx, rax
   shr rax, 4
   mov [rsi + rdi * 4], eax
-.newindex.2:
+.newindex.3:
   mov rdi, rdx
   shr rdi, 12
   and rdi, 0x03ff
   xor rsi, rsi
   mov esi, [rcx + rdi * 4]
   shl rsi, 4
-  jnz .newindex.3
+  jnz .newindex.4
   call memory.newpage@s
   call memory.zerofill
   mov rsi, rax
   shr rax, 4
   mov [rcx + rdi * 4], eax
-.newindex.3:
+.newindex.4:
   and rdx, 0x0fff
   lea rax, [rsi + rdx]
   pop rdi
