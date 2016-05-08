@@ -308,9 +308,232 @@ ide:
   pop rax
   ret
 
-  ; TODO: implement
-.cd.isready:
+  ; in: a = port number
+  ; in: d = device number
+.cd.issupportsdiskpresent:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  mov ecx, eax
+  mov ebx, edx
+  shl ebx, 4
+  call .wait.bsy.drq
+  jc .cd.issupportsdiskpresent.failed
+  ; first, select device
+  lea edx, [ecx + 6]
+  mov al, bl
+  out dx, al
+  call .wait.bsy.drq
+  ; then, send PACKET Command
+  lea edx, [ecx + 1]
+  mov al, 0x00
+  out dx, al
+  inc edx
+  out dx, al
+  add edx, 2
+  out dx, al
+  mov al, 4096 / 256
+  inc edx
+  out dx, al
+  lea edx, [ecx + 7]
+  mov al, 0xa0
+  out dx, al
+  call .wait.bsy.ndrq
+  jc .cd.issupportsdiskpresent.failed
+  ; then, create packet and send it
+  xor edx, edx
+  sub rsp, 16
+  mov [rsp], edx
+  mov [rsp + 4], edx
+  mov [rsp + 8], edx
+  mov byte [rsp], 0x5a  ; Mode Sense Command
+  mov byte [rsp + 2], 0x2a
+  mov byte [rsp + 8], 20
+  mov rsi, rsp
+  mov edx, ecx
+  mov ecx, 6
+  rep outsw
+  add rsp, 16
+  mov ecx, edx
+  call .hlt.bsy.ndrq
+  jc .cd.issupportsdiskpresent.failed
+  mov rsi, rsp
+  sub rsp, 24
+  mov rdi, rsp
+  mov edx, ecx
+  mov ecx, 20 / 2
+  rep insw
+  test byte [rsp + 7], 0x04
+  mov rsp, rsi
+  jz .cd.issupportsdiskpresent.failed
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
   jmp return.true
+.cd.issupportsdiskpresent.failed:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.false
+
+  ; in: a = port number
+  ; in: d = device number
+.cd.isdiskpresent:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  mov ecx, eax
+  mov ebx, edx
+  shl ebx, 4
+  call .wait.bsy.drq
+  jc .cd.isdiskpresent.failed
+  ; first, select device
+  lea edx, [ecx + 6]
+  mov al, bl
+  out dx, al
+  call .wait.bsy.drq
+  ; then, send PACKET Command
+  lea edx, [ecx + 1]
+  mov al, 0x00
+  out dx, al
+  inc edx
+  out dx, al
+  add edx, 2
+  out dx, al
+  mov al, 4096 / 256
+  inc edx
+  out dx, al
+  lea edx, [ecx + 7]
+  mov al, 0xa0
+  out dx, al
+  call .wait.bsy.ndrq
+  jc .cd.isdiskpresent.failed
+  ; then, create packet and send it
+  xor edx, edx
+  sub rsp, 16
+  mov [rsp], edx
+  mov [rsp + 4], edx
+  mov [rsp + 8], edx
+  mov byte [rsp], 0xbd  ; Mechanism Status Command
+  mov byte [rsp + 8], 4
+  mov byte [rsp + 9], 8
+  mov rsi, rsp
+  mov edx, ecx
+  mov ecx, 6
+  rep outsw
+  add rsp, 16
+  mov ecx, edx
+  call .hlt.bsy.ndrq
+  jc .cd.isdiskpresent.failed
+  call memory.newpage@s
+  mov rdi, rax
+  mov edx, ecx
+  mov ecx, (8 + 4 * 256) / 2
+  rep insw
+  mov dl, [rax + 8]
+  call memory.disposepage@s
+  test dl, 0x80
+  jz .cd.isdiskpresent.failed
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.true
+.cd.isdiskpresent.failed:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.false
+
+  ; in: a = port number
+  ; in: d = device number
+.cd.trytoread:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  mov ecx, eax
+  mov ebx, edx
+  shl ebx, 4
+  call .wait.bsy.drq
+  jc .cd.trytoread.failed
+  ; first, select device
+  lea edx, [ecx + 6]
+  mov al, bl
+  out dx, al
+  call .wait.bsy.drq
+  ; then, send PACKET Command
+  lea edx, [ecx + 1]
+  mov al, 0x00
+  out dx, al
+  inc edx
+  out dx, al
+  add edx, 2
+  out dx, al
+  mov al, 4096 / 256
+  inc edx
+  out dx, al
+  lea edx, [ecx + 7]
+  mov al, 0xa0
+  out dx, al
+  call .wait.bsy.ndrq
+  jc .cd.trytoread.failed
+  ; then, create packet and send it
+  xor edx, edx
+  sub rsp, 16
+  mov [rsp], edx
+  mov [rsp + 4], edx
+  mov [rsp + 8], edx
+  mov byte [rsp], 0xa8  ; Read Command
+  mov byte [rsp + 8], 2048 / 256
+  mov rsi, rsp
+  mov edx, ecx
+  mov ecx, 6
+  rep outsw
+  add rsp, 16
+  mov ecx, edx
+  call .hlt.bsy.ndrq
+  jc .cd.trytoread.failed
+  call memory.newpage@s
+  mov rdi, rax
+  mov edx, ecx
+  mov ecx, 2048 / 2
+  rep insw
+  call memory.disposepage@s
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.true
+.cd.trytoread.failed:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.false
 
   ; in: a = output address
   ; in: si = LBA

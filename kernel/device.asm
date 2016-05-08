@@ -35,15 +35,12 @@ device:
   call table.iterator.succ
   jmp .init.1
 .init.3:
-  xor edx, edx
-  mov [.boot], edx
-.init.4:
   mov eax, esi
   call objects.unref
   ret
 .init.hdd:
   ; find flag == 0 && type == ATA
-  mov [.boot], edx
+  mov ebp, edx
   xor rax, rax
   mov eax, edx
   shl rax, 4
@@ -54,10 +51,11 @@ device:
   shl rcx, 4
   cmp dword [rcx + object.internal.content + 8], .ata
   jne .init.2
-  jmp .init.4
+  mov [.boot], ebp
+  jmp .init.3
 .init.cd:
   ; find flag == 0 && type == ATAPI
-  mov [.boot], edx
+  mov ebp, edx
   xor rax, rax
   mov eax, edx
   shl rax, 4
@@ -70,19 +68,20 @@ device:
   jne .init.2
   ; is it a CD?
   mov eax, [rcx + object.internal.content]
-  mov edx, [rcx + object.internal.content]
+  mov edx, [rcx + object.internal.content + 4]
   call ide.iscd
   jc .init.2
-  ; Lock the device
-  call ide.cd.lock
-  call ide.cd.isready
-  jc .init.cd.failed
-  ; Unlock the device
-  call ide.cd.unlock
-  jmp .init.4
-.init.cd.failed:
-  call ide.cd.unlock
-  jmp .init.2
+  call ide.cd.issupportsdiskpresent
+  jc .init.cd.2
+  call ide.cd.isdiskpresent
+  jc .init.2
+  mov [.boot], ebp
+  jmp .init.3
+.init.cd.2:
+  call ide.cd.trytoread
+  jc .init.2
+  mov [.boot], ebp
+  jmp .init.3
 
 .new:
   push rdx
