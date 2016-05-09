@@ -106,7 +106,7 @@ ide:
   call objects.new.chunk
   mov [rax + object.internal.content], ecx
   mov [rax + object.internal.content + 4], ebx
-  mov [rax + object.internal.content + 8], ebp
+  mov [rax + object.internal.padding], bpl
   shr rax, 4
   mov [rdx + object.content + 4], eax
   shr rdx, 4
@@ -126,7 +126,7 @@ ide:
 
   ; in: a = port number
   ; in: d = device number
-.iscd:
+.isdiskdevice:
   push rax
   push rbx
   push rcx
@@ -137,7 +137,7 @@ ide:
   mov ebx, edx
   shl ebx, 4
   call .wait.bsy.drq
-  jc .iscd.failed
+  jc .isdiskdevice.failed
   ; first, select device
   lea edx, [ecx + 6]
   mov al, bl
@@ -158,7 +158,7 @@ ide:
   mov al, 0xa0
   out dx, al
   call .wait.bsy.ndrq
-  jc .iscd.failed
+  jc .isdiskdevice.failed
   ; then, create packet and send it
   xor edx, edx
   sub rsp, 16
@@ -174,7 +174,7 @@ ide:
   add rsp, 16
   mov ecx, edx
   call .hlt.bsy.ndrq
-  jc .iscd.failed
+  jc .isdiskdevice.failed
   call memory.newpage@s
   mov rdi, rax
   mov edx, ecx
@@ -184,7 +184,7 @@ ide:
   and ebx, 0x1f
   call memory.disposepage@s
   cmp ebx, 5
-  jne .iscd.failed
+  jne .isdiskdevice.failed
   pop rdi
   pop rsi
   pop rdx
@@ -192,7 +192,7 @@ ide:
   pop rbx
   pop rax
   jmp return.true
-.iscd.failed:
+.isdiskdevice.failed:
   pop rdi
   pop rsi
   pop rdx
@@ -308,177 +308,25 @@ ide:
   pop rax
   ret
 
-  ; in: a = port number
+  ; in: a = address of the buffer
+  ; in: b = LBA
+  ; in: c = port number
   ; in: d = device number
-.cd.issupportsdiskpresent:
-  push rax
+  ; out: a = address of the buffer or nil
+.read.atapi:
   push rbx
   push rcx
   push rdx
   push rsi
   push rdi
-  mov ecx, eax
-  mov ebx, edx
-  shl ebx, 4
-  call .wait.bsy.drq
-  jc .cd.issupportsdiskpresent.failed
-  ; first, select device
-  lea edx, [ecx + 6]
-  mov al, bl
-  out dx, al
-  call .wait.bsy.drq
-  ; then, send PACKET Command
-  lea edx, [ecx + 1]
-  mov al, 0x00
-  out dx, al
-  inc edx
-  out dx, al
-  add edx, 2
-  out dx, al
-  mov al, 4096 / 256
-  inc edx
-  out dx, al
-  lea edx, [ecx + 7]
-  mov al, 0xa0
-  out dx, al
-  call .wait.bsy.ndrq
-  jc .cd.issupportsdiskpresent.failed
-  ; then, create packet and send it
-  xor edx, edx
-  sub rsp, 16
-  mov [rsp], edx
-  mov [rsp + 4], edx
-  mov [rsp + 8], edx
-  mov byte [rsp], 0x5a  ; Mode Sense Command
-  mov byte [rsp + 2], 0x2a
-  mov byte [rsp + 8], 20
-  mov rsi, rsp
-  mov edx, ecx
-  mov ecx, 6
-  rep outsw
-  add rsp, 16
-  mov ecx, edx
-  call .hlt.bsy.ndrq
-  jc .cd.issupportsdiskpresent.failed
-  mov rsi, rsp
-  sub rsp, 24
-  mov rdi, rsp
-  mov edx, ecx
-  mov ecx, 20 / 2
-  rep insw
-  test byte [rsp + 7], 0x04
-  mov rsp, rsi
-  jz .cd.issupportsdiskpresent.failed
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
-  jmp return.true
-.cd.issupportsdiskpresent.failed:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
-  jmp return.false
-
-  ; in: a = port number
-  ; in: d = device number
-.cd.isdiskpresent:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  mov ecx, eax
-  mov ebx, edx
-  shl ebx, 4
-  call .wait.bsy.drq
-  jc .cd.isdiskpresent.failed
-  ; first, select device
-  lea edx, [ecx + 6]
-  mov al, bl
-  out dx, al
-  call .wait.bsy.drq
-  ; then, send PACKET Command
-  lea edx, [ecx + 1]
-  mov al, 0x00
-  out dx, al
-  inc edx
-  out dx, al
-  add edx, 2
-  out dx, al
-  mov al, 4096 / 256
-  inc edx
-  out dx, al
-  lea edx, [ecx + 7]
-  mov al, 0xa0
-  out dx, al
-  call .wait.bsy.ndrq
-  jc .cd.isdiskpresent.failed
-  ; then, create packet and send it
-  xor edx, edx
-  sub rsp, 16
-  mov [rsp], edx
-  mov [rsp + 4], edx
-  mov [rsp + 8], edx
-  mov byte [rsp], 0xbd  ; Mechanism Status Command
-  mov byte [rsp + 8], 4
-  mov byte [rsp + 9], 8
-  mov rsi, rsp
-  mov edx, ecx
-  mov ecx, 6
-  rep outsw
-  add rsp, 16
-  mov ecx, edx
-  call .hlt.bsy.ndrq
-  jc .cd.isdiskpresent.failed
-  call memory.newpage@s
   mov rdi, rax
-  mov edx, ecx
-  mov ecx, (8 + 4 * 256) / 2
-  rep insw
-  mov dl, [rax + 8]
-  call memory.disposepage@s
-  test dl, 0x80
-  jz .cd.isdiskpresent.failed
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
-  jmp return.true
-.cd.isdiskpresent.failed:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
-  jmp return.false
-
-  ; in: a = port number
-  ; in: d = device number
-.cd.trytoread:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  mov ecx, eax
-  mov ebx, edx
-  shl ebx, 4
+  mov esi, edx
+  shl esi, 4
   call .wait.bsy.drq
-  jc .cd.trytoread.failed
+  jc .read.atapi.failed
   ; first, select device
   lea edx, [ecx + 6]
-  mov al, bl
+  mov eax, esi
   out dx, al
   call .wait.bsy.drq
   ; then, send PACKET Command
@@ -489,14 +337,14 @@ ide:
   out dx, al
   add edx, 2
   out dx, al
-  mov al, 4096 / 256
+  mov al, 2048 / 256
   inc edx
   out dx, al
   lea edx, [ecx + 7]
   mov al, 0xa0
   out dx, al
   call .wait.bsy.ndrq
-  jc .cd.trytoread.failed
+  jc .read.atapi.failed
   ; then, create packet and send it
   xor edx, edx
   sub rsp, 16
@@ -504,7 +352,9 @@ ide:
   mov [rsp + 4], edx
   mov [rsp + 8], edx
   mov byte [rsp], 0xa8  ; Read Command
-  mov byte [rsp + 8], 2048 / 256
+  bswap ebx
+  mov [rsp + 2], ebx
+  mov byte [rsp + 9], 1  ; sector count = 1
   mov rsi, rsp
   mov edx, ecx
   mov ecx, 6
@@ -512,95 +362,21 @@ ide:
   add rsp, 16
   mov ecx, edx
   call .hlt.bsy.ndrq
-  jc .cd.trytoread.failed
-  call memory.newpage@s
-  mov rdi, rax
+  jc .read.atapi.failed
+  mov rax, rdi
   mov edx, ecx
   mov ecx, 2048 / 2
   rep insw
-  call memory.disposepage@s
+  jmp .read.atapi.end
+.read.atapi.failed:
+  xor rax, rax
+.read.atapi.end:
   pop rdi
   pop rsi
   pop rdx
   pop rcx
   pop rbx
-  pop rax
-  jmp return.true
-.cd.trytoread.failed:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
-  jmp return.false
-
-  ; in: a = output address
-  ; in: si = LBA
-.readsector:
-  ; HI4
-  push rax
-  push rbx
-  push rdx
-  push rsi
-  push rdi
-  push rax
-  mov ebx, [edi + 4]
-  call .wait.bsy.drq
-  jc .readsector.failed
-  ; HP0
-  ; first, send PACKET Command
-  lea edx, [ebx + 1]
-  mov al, 0x00
-  out dx, al  ; OVL = 0, DMA = 0
-  lea edx, [ebx + 4]
-  out dx, al
-  mov al, 2048 / 256
-  inc edx
-  out dx, al
-  lea edx, [ebx + 7]
-  mov al, 0xa0
-  out dx, al
-  call .wait.bsy.ndrq
-  jc .readsector.failed
-  ; HP1
-  ; then, create packet and send it
-  xor edx, edx
-  sub rsp, 16
-  mov [rsp], edx
-  mov [rsp + 4], edx
-  mov [rsp + 8], edx
-  mov byte [rsp], 0xa8  ; READ (12) Command
-  bswap esi
-  mov [rsp + 2], esi
-  mov byte [rsp + 8], 2048 / 256
-  mov rsi, rsp
-  mov ecx, 6
-  mov edx, ebx
-  rep outsw
-  add rsp, 16
-  ; HP3
-  ; wait interrupt
-  call .hlt.bsy.ndrq
-  jc .readsector.failed
-  mov edx, ebx
-  pop rdi
-  mov ecx, 2048 / 2
-  rep insw
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rbx
-  pop rax
-  jmp return.true
-.readsector.failed:
-  pop rax
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rbx
-  pop rax
-  jmp return.false
+  ret
 
 .wait.bsy.drq:
   lea edx, [ecx + 7]
@@ -656,9 +432,5 @@ ide:
   test al, 0x08  ; DRQ
   jz .hlt.bsy.ndrq.1
   jmp return.true
-
-  align 8
-.vtable.atapi:
-  dq .readsector
 
 %endif  ; IDE_ASM_
