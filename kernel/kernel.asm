@@ -12,14 +12,10 @@ entry:
   call interrupts.init
   call objects.init
   call device.init
-  mov rax, msg.ok
-  call console_out.prints
-  mov rax, msg.boot.device
-  call console_out.prints
-  xor rax, rax
   mov eax, [device.boot]
-  call console_out.printx
-  mov rax, msg.nl
+  test eax, eax
+  jz error.failed
+  mov rax, msg.ok
   call console_out.prints
   jmp end
 
@@ -49,8 +45,6 @@ msg:
 .ok: db 'OK.', 0x0a, 0
 .bad: db 'Failed.', 0
 .nem: db 'Not enough memory.', 0
-.boot.device: db 'Boot Device ID: ', 0
-.nl: db 0x0a, 0
 
 ; one page for the GDT, one for the IDT, one for the TLS
 global_page_size equ 3
