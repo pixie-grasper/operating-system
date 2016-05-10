@@ -186,6 +186,8 @@ device:
   mov ecx, [rbp + object.internal.content]
   mov edx, [rbp + object.internal.content + 4]
   call ide.read.atapi
+  test rax, rax
+  jz .newindex.failed
   and rdi, 0x0fff
   add rax, rdi
   jmp .newindex.end
