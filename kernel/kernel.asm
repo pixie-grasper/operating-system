@@ -35,8 +35,8 @@ end:
   jmp end
 
 %include "console-out.asm"
-%include "device.asm"
 %include "descriptor-tables.asm"
+%include "device.asm"
 %include "memory.asm"
 %include "objects.asm"
 
