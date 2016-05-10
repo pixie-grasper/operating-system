@@ -103,12 +103,12 @@ ide:
   xor rdx, rdx
   mov edx, eax
   shl rdx, 4
-  call objects.new.chunk
+  xor rax, rax
+  mov eax, [rdx + object.content + 4]
+  shl rax, 4
   mov [rax + object.internal.content], ecx
   mov [rax + object.internal.content + 4], ebx
   mov [rax + object.internal.padding], bpl
-  shr rax, 4
-  mov [rdx + object.content + 4], eax
   shr rdx, 4
   push rcx
   mov ecx, edx
@@ -337,7 +337,7 @@ ide:
   out dx, al
   add edx, 2
   out dx, al
-  mov al, 2048 / 256
+  mov al, 4096 / 256
   inc edx
   out dx, al
   lea edx, [ecx + 7]
@@ -354,7 +354,7 @@ ide:
   mov byte [rsp], 0xa8  ; Read Command
   bswap ebx
   mov [rsp + 2], ebx
-  mov byte [rsp + 9], 1  ; sector count = 1
+  mov byte [rsp + 9], 2  ; sector count = 2
   mov rsi, rsp
   mov edx, ecx
   mov ecx, 6
@@ -365,7 +365,7 @@ ide:
   jc .read.atapi.failed
   mov rax, rdi
   mov edx, ecx
-  mov ecx, 2048 / 2
+  mov ecx, 4096 / 2
   rep insw
   jmp .read.atapi.end
 .read.atapi.failed:

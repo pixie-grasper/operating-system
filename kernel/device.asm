@@ -3,9 +3,9 @@
 
 ; structure
 ;   device = {tuple, dependes on the flag}, extra-field = flag: 8 bit
-;   tuple = {octet-buffer x 3(buffer, ready-bitmap, modified-bitmap)}
+;   tuple = {octet-buffer, reserved, reserved}
 ;   flag: 0 = port-mapped I/O
-;           device = {buffer, dep}
+;           device = {tuple, dep}
 ;           dep = {port-number, device-number, reserved}, extra-field = type: 8 bit
 ;           type: 0 = ATA, 1 = ATAPI
 
@@ -74,8 +74,8 @@ device:
   jc .init.2
   ; is a El-Torito Bootable Disk?
   mov eax, ebp
-  mov edx, 0x11 * 4
-  call .read
+  mov edx, 0x11 * 2048
+  call .newindex
   test rax, rax
   jz .init.2
   mov rdx, rax
@@ -89,10 +89,10 @@ device:
   add rdi, 8
   dec ecx
   jnz .init.cd.1
-  mov edx, [rax + 0x47]  ; boot catalog
-  shl edx, 2
+  mov edx, [rax + 0x47]  ; LBA of the boot catalog
+  shl edx, 11  ; 1 LBA = 2048 bytes
   mov eax, ebp
-  call .read
+  call .newindex
   test rax, rax
   jz .init.2
   cmp dword [rax], 1
@@ -105,21 +105,23 @@ device:
   jmp .init.3
 
 .new:
+  push rcx
   push rdx
+  call objects.new.chunk
+  mov rcx, rax
+  shr rcx, 4
   call objects.new.chunk
   mov rdx, rax
   call octet_buffer.new
   mov [rdx + object.internal.content], eax
-  call octet_buffer.new
-  mov [rdx + object.internal.content + 4], eax
-  call octet_buffer.new
-  mov [rdx + object.internal.content + 8], eax
   shr rdx, 4
   call objects.new.raw
   mov byte [rax + object.class], object.device
   mov [rax + object.content], edx
+  mov [rax + object.content + 4], ecx
   shr rax, 4
   pop rdx
+  pop rcx
   ret
 
 .dispose.raw:
@@ -130,102 +132,66 @@ device:
   shl rdx, 4
   mov eax, [rdx + object.internal.content]
   call objects.unref
-  mov eax, [rdx + object.internal.content + 4]
-  call objects.unref
-  mov eax, [rdx + object.internal.content + 8]
-  call objects.unref
+  xor rdx, rdx
+  mov edx, [rax + object.content + 4]
+  shl rdx, 4
+  mov rax, rdx
+  call objects.dispose.raw
   pop rdx
   pop rax
   ret
 
   ; in: a = device id
-  ; in: d = virtual LBA (512 bytes / block)
+  ; in: d = address on the drive (byte-wised)
   ; out: a = address to the loaded buffer | nil
-.read:
+.newindex:
   push rbx
   push rcx
   push rdx
   push rsi
   push rdi
   push rbp
-  push r8
-  push r9
-  push r10
-  xor r8, r8
-  mov r8d, eax
-  shl r8, 4
-  xor r9, r9
-  mov r9d, [r8 + object.content]
-  shl r9, 4
-  mov eax, [r9 + object.internal.content + 4]
-  mov r10, rdx
-  shr rdx, 3
-  and rdx, ~0x03
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  xor rsi, rsi
+  mov esi, [rcx + object.content]
+  shl rsi, 4
+  mov eax, [rsi + object.internal.content]
   call octet_buffer.index
   test rax, rax
-  jz .read.1
-  mov rcx, r10
-  and ecx, 0x1f
-  mov edx, 1
-  shl edx, cl
-  test edx, [rax]
-  jz .read.1
-  mov eax, [r9 + object.internal.content]
-  mov rdx, r10
-  shl rdx, 9
-  call octet_buffer.index
-  jmp .read.end
-.read.1:
-  cmp byte [r8 + object.padding], 0
-  je .read.ide
-  jmp .read.failed
-.read.ide:
+  jnz .newindex.end
+  mov rdi, rdx
+  cmp byte [rcx + object.padding], .pmio
+  je .newindex.pmio
+  jmp .newindex.failed
+.newindex.pmio:
   xor rbp, rbp
-  mov ebp, [r8 + object.content + 4]
+  mov ebp, [rcx + object.content + 4]
   shl rbp, 4
   cmp byte [rbp + object.internal.padding], .ata
-  je .read.ide.ata
+  je .newindex.pmio.ata
   cmp byte [rbp + object.internal.padding], .atapi
-  je .read.ide.atapi
-  jmp .read.failed
-.read.ide.ata:
+  je .newindex.pmio.atapi
+  jmp .newindex.failed
+.newindex.pmio.ata:
   ; TODO: implement
-  jmp .read.failed
-.read.ide.atapi:
-  mov eax, [r9 + object.internal.content]
-  mov rdx, r10
-  shl rdx, 9
+  jmp .newindex.failed
+.newindex.pmio.atapi:
+  mov eax, [rsi + object.internal.content]
+  and rdx, ~0x0fff
   call octet_buffer.newindex
+  mov rbx, rdx
+  shr rbx, 11
   mov ecx, [rbp + object.internal.content]
   mov edx, [rbp + object.internal.content + 4]
-  mov rbx, r10
-  shr rbx, 2  ; 512/2048 address convert
   call ide.read.atapi
-  mov rdi, rax
-  mov eax, [r9 + object.internal.content + 4]
-  mov rdx, r10
-  shr rdx, 3
-  and rdx, ~0x03
-  call octet_buffer.newindex
-  mov rsi, rax
-  mov rcx, r10
-  and ecx, 0x1c
-  mov edx, 0x0f
-  shl edx, cl
-.read.ide.atapi.1:
-  mov eax, [rsi]
-  mov ecx, eax
-  or ecx, edx
-  lock cmpxchg [rsi], ecx
-  jne .read.ide.atapi.1
-  mov rax, rdi
-  jmp .read.end
-.read.failed:
+  and rdi, 0x0fff
+  add rax, rdi
+  jmp .newindex.end
+.newindex.failed:
   xor rax, rax
-.read.end:
-  pop r10
-  pop r9
-  pop r8
+.newindex.end:
   pop rbp
   pop rdi
   pop rsi
@@ -237,6 +203,8 @@ device:
 .table: dd 0
 .num.of.device: dq 0
 .boot: dd 0
+
+.pmio equ 0
 
 .ata   equ 0
 .atapi equ 1
