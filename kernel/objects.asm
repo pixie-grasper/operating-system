@@ -176,6 +176,8 @@ objects:
   je .unref.table
   cmp dl, object.table.iterator
   je .unref.table.iterator
+  cmp dl, object.device
+  je .unref.device
 .unref.2:
   call .dispose.raw
 .unref.3:
@@ -203,6 +205,9 @@ objects:
   jmp .unref.2
 .unref.table.iterator:
   call table.iterator.dispose.raw
+  jmp .unref.2
+.unref.device:
+  call device.dispose.raw
   jmp .unref.2
 
   ; in: a = object address
