@@ -75,7 +75,7 @@ device:
   ; is a El-Torito Bootable Disk?
   mov eax, ebp
   mov edx, 0x11 * 2048
-  call .newindex
+  call .index
   test rax, rax
   jz .init.2
   mov rdx, rax
@@ -92,7 +92,7 @@ device:
   mov edx, [rax + 0x47]  ; LBA of the boot catalog
   shl edx, 11  ; 1 LBA = 2048 bytes
   mov eax, ebp
-  call .newindex
+  call .index
   test rax, rax
   jz .init.2
   cmp dword [rax], 1
@@ -144,7 +144,7 @@ device:
   ; in: a = device id
   ; in: d = address on the drive (byte-wised)
   ; out: a = address to the loaded buffer | nil
-.newindex:
+.index:
   push rbx
   push rcx
   push rdx
@@ -160,24 +160,24 @@ device:
   mov eax, [rsi + object.internal.content]
   call octet_buffer.index
   test rax, rax
-  jnz .newindex.end
+  jnz .index.end
   mov rdi, rdx
   cmp byte [rcx + object.padding], .pmio
-  je .newindex.pmio
-  jmp .newindex.failed
-.newindex.pmio:
+  je .index.pmio
+  jmp .index.failed
+.index.pmio:
   xor rbp, rbp
   mov ebp, [rcx + object.content + 4]
   shl rbp, 4
   cmp byte [rbp + object.internal.padding], .ata
-  je .newindex.pmio.ata
+  je .index.pmio.ata
   cmp byte [rbp + object.internal.padding], .atapi
-  je .newindex.pmio.atapi
-  jmp .newindex.failed
-.newindex.pmio.ata:
+  je .index.pmio.atapi
+  jmp .index.failed
+.index.pmio.ata:
   ; TODO: implement
-  jmp .newindex.failed
-.newindex.pmio.atapi:
+  jmp .index.failed
+.index.pmio.atapi:
   mov eax, [rsi + object.internal.content]
   and rdx, ~0x0fff
   call octet_buffer.newindex
@@ -187,13 +187,13 @@ device:
   mov edx, [rbp + object.internal.content + 4]
   call ide.read.atapi
   test rax, rax
-  jz .newindex.failed
+  jz .index.failed
   and rdi, 0x0fff
   add rax, rdi
-  jmp .newindex.end
-.newindex.failed:
+  jmp .index.end
+.index.failed:
   xor rax, rax
-.newindex.end:
+.index.end:
   pop rbp
   pop rdi
   pop rsi
