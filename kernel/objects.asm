@@ -179,6 +179,8 @@ objects:
   je .unref.table.iterator
   cmp dl, object.device
   je .unref.device
+  cmp dl, object.iso9660.iterator
+  je .unref.iso9660.iterator
 .unref.2:
   call .dispose.raw
 .unref.3:
@@ -209,6 +211,9 @@ objects:
   jmp .unref.2
 .unref.device:
   call device.dispose.raw
+  jmp .unref.2
+.unref.iso9660.iterator:
+  call iso9660.iterator.dispose.raw
   jmp .unref.2
 
   ; in: a = object address
@@ -296,14 +301,14 @@ objects:
 
   ; in: a = object id
 .isbool:
-  test eax, eax
+  test rax, rax
   jz return.true
-  cmp eax, 1
+  cmp rax, 1
   jz return.true
   jmp return.false
 
 .isfalse:
-  test eax, eax
+  test rax, rax
   jz return.true
   jmp return.false
 
