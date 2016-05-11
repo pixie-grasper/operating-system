@@ -19,6 +19,7 @@ endstruc
 .table equ 6
 .table.iterator equ 7
 .device equ 8
+.iso9660.iterator equ 9
 
 struc object.internal
   .mark resb 1

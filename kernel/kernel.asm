@@ -37,6 +37,7 @@ end:
 %include "console-out.asm"
 %include "descriptor-tables.asm"
 %include "device.asm"
+%include "iso9660.asm"
 %include "memory.asm"
 %include "objects.asm"
 
