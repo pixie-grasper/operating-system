@@ -20,6 +20,8 @@ endstruc
 .table.iterator equ 7
 .device equ 8
 .iso9660.iterator equ 9
+.iso9660.file.status equ 10
+.file equ 11
 
 struc object.internal
   .mark resb 1
@@ -27,6 +29,7 @@ struc object.internal
   .content resd 3
 endstruc
 
+%include "file.asm"
 %include "integer.asm"
 %include "octet-buffer.asm"
 %include "set.asm"
@@ -181,6 +184,10 @@ objects:
   je .unref.device
   cmp dl, object.iso9660.iterator
   je .unref.iso9660.iterator
+  cmp dl, object.iso9660.file.status
+  je .unref.iso9660.file.status
+  cmp dl, object.file
+  je .unref.file
 .unref.2:
   call .dispose.raw
 .unref.3:
@@ -214,6 +221,12 @@ objects:
   jmp .unref.2
 .unref.iso9660.iterator:
   call iso9660.iterator.dispose.raw
+  jmp .unref.2
+.unref.iso9660.file.status:
+  call iso9660.file.status.dispose.raw
+  jmp .unref.2
+.unref.file:
+  call file.dispose.raw
   jmp .unref.2
 
   ; in: a = object address

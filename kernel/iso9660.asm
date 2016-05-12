@@ -5,6 +5,7 @@
 ;   iterator = {property, status}
 ;   property = {device, current deref | nil, reserved}
 ;   status = {LBA of the directory record, current pos, length of the record}
+;   file-status = {device, file-size, LBA of the begins file}
 
 iso9660:
 .iterator.dispose.raw:
@@ -25,6 +26,13 @@ iso9660:
   call objects.dispose.raw
   pop rdx
   pop rcx
+  pop rax
+  ret
+
+.file.status.dispose.raw:
+  push rax
+  mov eax, [rax + object.internal.content]
+  call objects.unref
   pop rax
   ret
 
