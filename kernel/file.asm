@@ -7,13 +7,17 @@
 
 file:
 .new:
+  call .new.raw
+  shr rax, 4
+  ret
+
+.new.raw:
   push rdx
   call octet_buffer.new
   mov edx, eax
   call objects.new.raw
   mov byte [rax + object.class], object.file
   mov [rax + object.content], edx
-  shr rax, 4
   pop rdx
   ret
 
@@ -38,6 +42,41 @@ file:
   pop rdx
   pop rcx
   pop rax
+  ret
+
+  ; in: a = file id
+  ; in: d = offset
+  ; out: a = nil | mapped address
+.index:
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  xor rdi, rdi
+  mov edi, eax
+  shl rdi, 4
+  mov eax, [rdi + object.content]
+  call octet_buffer.index
+  test rax, rax
+  jnz .index.end
+  xor rsi, rsi
+  mov esi, [rdi + object.content + 4]
+  shl rsi, 4
+  jz .index.end
+  mov rcx, rdx
+  and rdx, ~0x0fff
+  mov eax, [rdi + object.content]
+  call octet_buffer.newindex
+  test rax, rax
+  jz .index.end
+  mov rdx, rcx
+  mov ecx, [rsi + object.internal.content]
+  call [rsi + object.internal.content + 4]
+.index.end:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
   ret
 
 %endif  ; FILE_ASM_

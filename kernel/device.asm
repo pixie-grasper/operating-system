@@ -202,6 +202,112 @@ device:
   pop rbx
   ret
 
+  ; in: a = device id
+  ; in: c = length (byte-wised)
+  ; in: d = address on the drive (byte-wised)
+  ; in: di = address to copy
+.index.cp:
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  mov rsi, rdx
+  and rsi, 0x0fff
+  add rsi, rcx
+  test rsi, 0x1000
+  jnz .index.cp.4
+  call .index
+  test rax, rax
+  jz .index.cp.failed
+.index.cp.1:
+  cmp rcx, 4
+  jb .index.cp.2
+  mov edx, [rax]
+  mov [rdi], edx
+  add rax, 4
+  add rdi, 4
+  sub rcx, 4
+  jmp .index.cp.1
+.index.cp.2:
+  test rcx, rcx
+  jz .index.cp.end
+.index.cp.3:
+  mov dl, [rax]
+  mov [rdi], dl
+  inc rax
+  inc rdi
+  dec rcx
+  jnz .index.cp.3
+  jmp .index.cp.end
+.index.cp.4:
+  mov esi, eax
+  call .index
+  test rax, rax
+  jz .index.cp.failed
+  mov rbx, rax
+  mov eax, esi
+  add rdx, rcx
+  dec rdx
+  call .index
+  test rax, rax
+  jz .index.cp.failed
+.index.cp.5:
+  test rbx, 0x03
+  jz .index.cp.6
+  mov dl, [rbx]
+  mov [rdi], dl
+  inc rbx
+  inc rdi
+  dec rcx
+  jmp .index.cp.5
+.index.cp.6:
+  test rbx, 0x0fff
+  jz .index.cp.7
+  mov edx, [rbx]
+  mov [rdi], edx
+  add rbx, 4
+  add rdi, 4
+  sub rcx, 4
+  jmp .index.cp.6
+.index.cp.7:
+  cmp rcx, 4
+  jb .index.cp.8
+  mov edx, [rax]
+  mov [rdi], edx
+  add rax, 4
+  add rdi, 4
+  sub rcx, 4
+  jmp .index.cp.7
+.index.cp.8:
+  test rcx, rcx
+  jz .index.cp.end
+.index.cp.9:
+  mov dl, [rax]
+  mov [rdi], dl
+  inc rax
+  inc rdi
+  dec rcx
+  jnz .index.cp.9
+  jmp .index.cp.end
+.index.cp.failed:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.false
+.index.cp.end:
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+  jmp return.true
+
 .table: dd 0
 .num.of.device: dq 0
 .boot: dd 0

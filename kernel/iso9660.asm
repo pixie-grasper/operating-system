@@ -5,7 +5,7 @@
 ;   iterator = {property, status}
 ;   property = {device, current deref | nil, reserved}
 ;   status = {LBA of the directory record, current pos, length of the record}
-;   file-status = {device, file-size, LBA of the begins file}
+;   file.status = {device, status}
 
 iso9660:
 .iterator.dispose.raw:
@@ -31,13 +31,18 @@ iso9660:
 
 .file.status.dispose.raw:
   push rax
-  mov eax, [rax + object.internal.content]
+  mov edx, [rax + object.content + 4]
+  mov eax, [rax + object.content]
   call objects.unref
+  xor rax, rax
+  mov eax, edx
+  shl rax, 4
+  call objects.dispose.raw
   pop rax
   ret
 
   ; in: a = device
-  ; out: a = iterator of the root | nil
+  ; out: a = iterator id of the root | nil
 .begin:
   push rcx
   push rdx
@@ -70,6 +75,7 @@ iso9660:
   shr rax, 4
   mov esi, eax
   call objects.new.raw
+  mov byte [rax + object.class], object.iso9660.iterator
   mov [rax + object.content], esi
   mov [rax + object.content + 4], ecx
   shr rax, 4
@@ -79,7 +85,7 @@ iso9660:
   pop rcx
   ret
 
-  ; in: a = iterator
+  ; in: a = iterator id
 .iterator.succ:
   push rax
   push rbx
@@ -125,7 +131,7 @@ iso9660:
   pop rax
   ret
 
-  ; in: a = iterator
+  ; in: a = iterator id
 .iterator.isrefsfile:
   push rax
   push rbx
@@ -160,7 +166,126 @@ iso9660:
   jz return.true
   jmp return.false
 
-  ; in: a = iterator
+  ; in: a = iterator id refs directory
+  ; out: a = refed iterator id | nil
+.iterator.deref.directory:
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
+  xor rcx, rcx
+  mov ecx, [rsi + object.content]
+  shl rcx, 4
+  mov eax, [rcx + object.internal.content + 4]
+  test eax, eax
+  jnz .iterator.deref.directory.end.2
+  mov eax, [rcx + object.internal.content]
+  call objects.ref
+  xor rbx, rbx
+  mov ebx, [rsi + object.content + 4]
+  shl rbx, 4
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content]
+  shl rdx, 11
+  xor rcx, rcx
+  mov ecx, [rbx + object.internal.content + 4]
+  add rdx, rcx
+  mov rcx, 28
+  sub rsp, 32
+  mov rdi, rsp
+  mov esi, eax
+  call device.index.cp
+  jc .iterator.deref.directory.failed
+  test byte [rdi + 25], 0x02  ; directory?
+  jz .iterator.deref.directory.failed
+  mov ecx, [rdi + 2]  ; location
+  mov edx, [rdi + 10]  ; length
+  call objects.new.chunk
+  mov [rax + object.internal.content], ecx
+  mov [rax + object.internal.content + 8], edx
+  shr rax, 4
+  mov ecx, eax
+  call objects.new.chunk
+  mov [rax + object.internal.content], esi
+  shr rax, 4
+  mov esi, eax
+  call objects.new.raw
+  mov byte [rax + object.class], object.iso9660.iterator
+  mov [rax + object.content], esi
+  mov [rax + object.content + 4], ecx
+  shr rax, 4
+  jmp .iterator.deref.directory.end
+.iterator.deref.directory.failed:
+  xor rax, rax
+.iterator.deref.directory.end:
+  add rsp, 32
+.iterator.deref.directory.end.2:
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  ret
+
+  ; in: a = iterator id refs file
+  ; out: a = file id
+.iterator.deref.file:
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
+  xor rcx, rcx
+  mov ecx, [rsi + object.content]
+  shl rcx, 4
+  mov eax, [rcx + object.internal.content + 4]
+  test eax, eax
+  jnz .iterator.deref.file.end.2
+  mov eax, [rcx + object.internal.content]
+  call objects.ref
+  xor rbx, rbx
+  mov ebx, [rsi + object.content + 4]
+  shl rbx, 4
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content]
+  shl rdx, 11
+  xor rcx, rcx
+  mov ecx, [rbx + object.internal.content + 4]
+  add rdx, rcx
+  mov rcx, 28
+  sub rsp, 32
+  mov rdi, rsp
+  mov esi, eax
+  call device.index.cp
+  jc .iterator.deref.file.failed
+  test byte [rdi + 25], 0x02  ; file?
+  jnz .iterator.deref.file.failed
+  call file.new.raw
+  mov rdx, rax
+  call objects.new.chunk
+  mov [rax + object.internal.content], esi
+  mov qword [rax + object.internal.content + 4], .file.index
+  shr rax, 4
+  mov [rdx + object.content], eax
+  shr rdx, 4
+  mov eax, edx
+  jmp .iterator.deref.file.end
+.iterator.deref.file.failed:
+  xor rax, rax
+.iterator.deref.file.end:
+  add rsp, 32
+.iterator.deref.file.end.2:
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  ret
+
+  ; in: a = iterator id
 .iterator.isend:
   push rax
   push rcx
@@ -178,5 +303,12 @@ iso9660:
   pop rax
   jae return.true
   jmp return.false
+
+  ; in: a = page address
+  ; in: c = file.status id
+  ; in: d = file offset
+  ; TODO: implement
+.file.index:
+  ret
 
 %endif  ; ISO9660_ASM_
