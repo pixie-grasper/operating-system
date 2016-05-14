@@ -166,6 +166,76 @@ iso9660:
   jz return.true
   jmp return.false
 
+  ; in: a = iterator id
+  ; out: a = octet-buffer id indicates a name of the refed object
+.iterator.getname:
+  push rbx
+  push rcx
+  push rdx
+  push rsi
+  push rdi
+  push rbp
+  xor rsi, rsi
+  mov esi, eax
+  shl rsi, 4
+  xor rbp, rbp
+  mov ebp, [rsi + object.content]
+  shl rbp, 4
+  mov eax, [rbp + object.internal.content]
+  mov ebp, eax
+  xor rbx, rbx
+  mov ebx, [rsi + object.content + 4]
+  shl rbx, 4
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content]
+  shl rdx, 11
+  xor rcx, rcx
+  mov ecx, [rbx + object.internal.content + 4]
+  add rdx, rcx
+  mov rbx, rdx
+  call device.index
+  xor rcx, rcx
+  mov cl, [rax]
+  call octet_buffer.new
+  mov esi, eax
+  xor rdx, rdx
+  call octet_buffer.newindex
+  mov rdi, rax
+  mov rdx, rbx
+  mov eax, ebp
+  call device.index.cp
+  mov rbx, rdi
+  add rbx, 33
+  xor rcx, rcx
+  xor rdx, rdx
+  mov cl, [rdi + 32]
+  mov edx, ecx
+  add ecx, 0x03
+  shr ecx, 2
+  jz .iterator.getname.2
+.iterator.getname.1:
+  mov eax, [rbx]
+  mov [rdi], eax
+  add rbx, 4
+  add rdi, 4
+  dec ecx
+  jnz .iterator.getname.1
+.iterator.getname.2:
+  xor rbx, rbx
+  mov ebx, edx
+  add ebx, 3
+  and ebx, ~3
+  sub rdi, rbx
+  mov [rdi + rdx], ecx
+  mov eax, esi
+  pop rbp
+  pop rdi
+  pop rsi
+  pop rdx
+  pop rcx
+  pop rbx
+  ret
+
   ; in: a = iterator id refs directory
   ; out: a = refed iterator id | nil
 .iterator.deref.directory:
