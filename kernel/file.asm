@@ -45,6 +45,17 @@ file:
   ret
 
   ; in: a = file id
+  ; in: d = info id
+.set.info:
+  push rcx
+  xor rcx, rcx
+  mov ecx, eax
+  shl rcx, 4
+  mov [rcx + object.content + 4], edx
+  pop rcx
+  ret
+
+  ; in: a = file id
   ; in: d = offset
   ; out: a = nil | mapped address
 .index:

@@ -336,13 +336,13 @@ iso9660:
   jnz .iterator.deref.file.failed
   call file.new.raw
   mov rdx, rax
+  shr rdx, 4
   call objects.new.chunk
   mov [rax + object.internal.content], esi
   mov qword [rax + object.internal.content + 4], .file.index
   shr rax, 4
-  mov [rdx + object.content], eax
-  shr rdx, 4
-  mov eax, edx
+  xchg eax, edx
+  call file.set.info
   jmp .iterator.deref.file.end
 .iterator.deref.file.failed:
   xor rax, rax
