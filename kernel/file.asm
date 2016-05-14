@@ -47,12 +47,21 @@ file:
   ; in: a = file id
   ; in: d = info id
 .set.info:
+  push rax
   push rcx
   xor rcx, rcx
   mov ecx, eax
   shl rcx, 4
+  xor rax, rax
+  mov eax, [rcx + object.content + 4]
+  shl rax, 4
+  jz .set.info.1
+  mov eax, [rax + object.internal.content]
+  call objects.unref
+.set.info.1:
   mov [rcx + object.content + 4], edx
   pop rcx
+  pop rax
   ret
 
   ; in: a = file id
