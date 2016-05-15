@@ -334,14 +334,12 @@ iso9660:
   jc .iterator.deref.file.failed
   test byte [rdi + 25], 0x02  ; file?
   jnz .iterator.deref.file.failed
-  call file.new.raw
-  mov rdx, rax
-  shr rdx, 4
   call objects.new.chunk
   mov [rax + object.internal.content], esi
   mov qword [rax + object.internal.content + 4], .file.index
   shr rax, 4
-  xchg eax, edx
+  mov edx, eax
+  call file.new
   call file.set.info
   jmp .iterator.deref.file.end
 .iterator.deref.file.failed:
