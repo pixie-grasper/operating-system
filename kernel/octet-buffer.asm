@@ -148,6 +148,7 @@ octet_buffer:
   shr rdi, 10 + 10 + 12
 %endif  ; OBJECT_32_BYTES
   ldaddr si, [rcx + rdi * word.size]
+  testaddr si
   jnz .newindex.2
   call memory.newpage@s
   call memory.zerofill
@@ -158,11 +159,13 @@ octet_buffer:
   mov rdi, rdx
 %ifdef OBJECT_32_BYTES
   shr rdi, 9 + 12
+  and rdi, 0x01ff
 %else  ; OBJECT_32_BYTES
   shr rdi, 10 + 12
-%endif  ; OBJECT_32_BYTES
   and rdi, 0x03ff
+%endif  ; OBJECT_32_BYTES
   ldaddr c, [rsi + rdi * word.size]
+  testaddr c
   jnz .newindex.3
   call memory.newpage@s
   call memory.zerofill
@@ -172,8 +175,13 @@ octet_buffer:
 .newindex.3:
   mov rdi, rdx
   shr rdi, 12
+%ifdef OBJECT_32_BYTES
+  and rdi, 0x01ff
+%else  ; OBJECT_32_BYTES
   and rdi, 0x03ff
+%endif  ; OBJECT_32_BYTES
   ldaddr si, [rcx + rdi * word.size]
+  testaddr si
   jnz .newindex.4
   call memory.newpage@s
   call memory.zerofill
