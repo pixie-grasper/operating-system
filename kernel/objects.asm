@@ -1,6 +1,25 @@
 %ifndef OBJECTS_ASM_
 %define OBJECTS_ASM_
 
+; page size = 4096 bytes
+; object size = 16 / 32 bytes
+;   if object-size == 16:
+;     objects-per-page := 4096 / 16 (= 256)
+;     256-bits = 32 bytes = 2 chunks 
+;   else:
+;     objects-per-page := 4096 / 32 (= 128)
+;     128-bits = 16 bytes = 0.5 chunk
+
+%ifdef OBJECT_32_BYTES
+struc object
+  .mark resb 1
+  .class resb 1
+  .padding resb 6
+  .refcount resd 1
+  .padding.2 resd 1
+  .content resq 2
+endstruc
+%else  ; OBJECT_32_BYTES
 struc object
   .mark resb 1
   .class resb 1
@@ -8,6 +27,7 @@ struc object
   .refcount resd 1
   .content resd 2
 endstruc
+%endif  ; OBJECT_32_BYTES
 
 ; classes
 .system equ 0
@@ -23,11 +43,19 @@ endstruc
 .iso9660.file.status equ 10
 .file equ 11
 
+%ifdef OBJECT_32_BYTES
+struc object.internal
+  .mark resb 1
+  .padding resb 7
+  .content resq 3
+endstruc
+%else  ; OBJECT_32_BYTES
 struc object.internal
   .mark resb 1
   .padding resb 3
   .content resd 3
 endstruc
+%endif
 
 %include "file.asm"
 %include "integer.asm"
@@ -43,29 +71,43 @@ objects:
   call .newheap
   ret
 
+%ifdef OBJECT_32_BYTES
 .newheap:
   push rcx
-  push rdx
-  push rdi
   call memory.newpage@s
-  mov rdi, rax
-  mov ecx, 4096 / 4
-  xor edx, edx
+  call memory.zerofill
+  mov byte [rax], 1  ; reserves 32 byte / 4096 byte
+  mov rcx, rax
+  mov rax, [fs:TLS.objects.heap]
+  mov [rcx + 16], rax
+  lock cmpxchg [fs:TLS.objects.heap], rcx
+  mov rax, rcx
+  je .newheap.1
+  call memory.disposepage@s
+  mov rax, [fs:TLS.objects.heap]
 .newheap.1:
-  mov [rdi], edx
-  add rdi, 4
-  dec ecx
-  jnz .newheap.1
-  mov byte [rax], 7  ; reserves 48 byte / 4096 byte
-  ; the third object points to the old heap page.
-  mov rdx, [fs:TLS.objects.heap]
-  mov byte [rax + 32 + object.class], object.system
-  mov [rax + 32 + object.content], rdx
-  mov [fs:TLS.objects.heap], rax
-  pop rdi
-  pop rdx
   pop rcx
   ret
+%else  ; OBJECT_32_BYTES
+.newheap:
+  push rcx
+  call memory.newpage@s
+  call memory.zerofill
+  mov byte [rax], 7  ; reserves 48 byte / 4096 byte
+  mov byte [rax + 32 + object.class], object.system
+  mov rcx, rax
+  ; the third object points to the old heap page.
+  mov rax, [fs:TLS.objects.heap]
+  mov [rcx + 32 + object.content], rax
+  lock cmpxchg [fs:TLS.objects.heap], rcx
+  mov rax, rcx
+  je .newheap.1
+  call memory.disposepage@s
+  mov rax, [fs:TLS.objects.heap]
+.newheap.1:
+  pop rcx
+  ret
+%endif
 
   ; out: a = chunk address
   ; assume run on single-process per thread.
@@ -79,29 +121,43 @@ objects:
   mov rdi, rsi
   xor rax, rax
   xor ecx, ecx
-.new.chunk.2:
   mov eax, [rsi]
+.new.chunk.2:
   mov edx, eax
   inc edx
   jz .new.chunk.3
   or edx, eax
-  mov [rsi], edx
+  lock cmpxchg [rsi], edx
+  jne .new.chunk.2
   xor edx, eax  ; only single bit on
   dec edx
+  xor rax, rax
   popcnt eax, edx
+%ifdef OBJECT_32_BYTES
+  shl eax, 5
+%else  ; OBJECT_32_BYTES
   shl eax, 4
+%endif  ; OBJECT_32_BYTES
   add eax, ecx
   add rax, rdi
   xor rcx, rcx
   mov [rax], rcx
   mov [rax + 8], rcx
+%ifdef OBJECT_32_BYTES
+  mov [rax + 16], rcx
+  mov [rax + 24], rcx
+%endif  ; OBJECT_32_BYTES
   pop rdi
   pop rsi
   pop rdx
   pop rcx
   ret
 .new.chunk.3:
-  add ecx, 512
+%ifdef OBJECT_32_BYTES
+  add ecx, 1024  ; = 32 * 32
+%else  ; OBJECT_32_BYTES
+  add ecx, 512  ; = 32 * 16
+%endif  ; OBJECT_32_BYTES
   add rsi, 4
   cmp ecx, 4096
   jne .new.chunk.2
@@ -112,7 +168,7 @@ objects:
 .new:
   call .new.chunk
   call .ref.init
-  shr rax, 4
+  id_from_addr a
   ret
 
   ; out: a = object address
@@ -132,11 +188,9 @@ objects:
   push rax
   push rcx
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-.ref.1:
+  addr_from_id d, a
   mov eax, [rdx + object.refcount]
+.ref.1:
   mov ecx, eax
   inc ecx
   lock cmpxchg [rdx + object.refcount], ecx
@@ -151,11 +205,10 @@ objects:
 .unref:
   call .isbool
   jnc .unref.4
+  push rax
   push rcx
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
+  addr_from_id d, a
 .unref.1:
   mov eax, [rdx + object.refcount]
   mov ecx, eax
@@ -193,6 +246,7 @@ objects:
 .unref.3:
   pop rdx
   pop rcx
+  pop rax
 .unref.4:
   ret
 .unref.integer:
@@ -237,17 +291,24 @@ objects:
   mov rdi, rax
   mov rcx, rax
   and rdi, ~0x0fff
+%ifdef OBJECT_32_BYTES
+  and rcx, 0x03e0
+  shr ecx, 5
+  and rax, 0x0c00
+  shr rax, 10 - 2
+%else  ; OBJECT_32_BYTES
+  and rcx, 0x01f0
+  shr ecx, 4
   and rax, 0x0e00
   shr rax, 9 - 2
+%endif  ; OBJECT_32_BYTES
   add rdi, rax
-  and rcx, 0x01f0
-  shr rcx, 4
   mov eax, 1
   shl eax, cl
   mov ecx, eax
   not ecx
-.dispose.raw.1:
   mov eax, [rdi]
+.dispose.raw.1:
   mov edx, eax
   and edx, ecx
   lock cmpxchg [rdi], edx
@@ -263,18 +324,14 @@ objects:
   ; in: d = object id 2
   ; out: a = boolean id
 .lt@us:
-  test edx, edx
+  testid d
   jz .new.false
-  test eax, eax
+  testid a
   jz .new.true
   cmp eax, edx
   je .new.false
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rdi, rdi
-  mov edi, edx
-  shl rdi, 4
+  addr_from_id si, a
+  addr_from_id di, d
   mov cl, [rsi + object.class]
   cmp cl, [rdi + object.class]
   ja .new.false
@@ -301,11 +358,11 @@ objects:
   ret
 
 .new.nil:
-  xor rax, rax
+  ldnil a
   ret
 
 .new.false:
-  xor rax, rax
+  ldnil a
   ret
 
 .new.true:
@@ -314,14 +371,14 @@ objects:
 
   ; in: a = object id
 .isbool:
-  test rax, rax
+  testid a
   jz return.true
   cmp rax, 1
   jz return.true
   jmp return.false
 
 .isfalse:
-  test rax, rax
+  testid a
   jz return.true
   jmp return.false
 

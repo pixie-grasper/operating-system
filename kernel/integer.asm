@@ -6,7 +6,7 @@ integer:
 .new:
   call objects.new.raw
   mov byte [rax + object.class], object.integer
-  shr rax, 4
+  id_from_addr a
   ret
 
   ; in: a = int:64
@@ -26,9 +26,7 @@ integer:
   ; out: a = int:64
 .get:
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
+  addr_from_id d, a
   mov rax, [rdx + object.content]
   pop rdx
   ret
@@ -37,9 +35,7 @@ integer:
   ; in: d = int:64
 .set:
   push rcx
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
+  addr_from_id c, a
   mov [rcx + object.content], rdx
   pop rcx
   ret
@@ -48,16 +44,11 @@ integer:
   ; in: d = integer id 2
   ; out: a = result
 .lt@us:
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  mov rax, rcx
-  xor rcx, rcx
-  mov ecx, edx
-  shl rcx, 4
-  mov rax, [rax + object.content]
+  addr_from_id c, a
+  addr_from_id a, d
   mov rcx, [rcx + object.content]
-  cmp rax, rcx
+  mov rax, [rax + object.content]
+  cmp rcx, rax
   jl objects.new.true
   jmp objects.new.false
 

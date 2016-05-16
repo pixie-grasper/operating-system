@@ -10,12 +10,12 @@ set:
 .new:
   call objects.new.raw
   mov byte [rax + object.class], object.set
-  shr rax, 4
+  id_from_addr a
   ret
 
 .dispose.raw:
   push rax
-  shr rax, 4
+  id_from_addr a
   call .clear
   pop rax
   ret
@@ -24,12 +24,9 @@ set:
 .clear:
   push rax
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  xor rax, rax
-  mov eax, [rdx + object.content]
-  shl rax, 4
+  addr_from_id d, a
+  ldaddr a, [rdx + object.content]
+  testaddr a
   jz .clear.1
   mov rdx, rax
   call .clear.2
@@ -38,20 +35,18 @@ set:
   pop rax
   ret
 .clear.2:
-  mov eax, [rdx + object.internal.content]
+  ldid a, [rdx + object.internal.content]
   call objects.unref
   mov rax, rdx
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size]
+  testaddr d
   jz .clear.3
   push rax
   call .clear.2
   pop rax
 .clear.3:
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size * 2]
+  testaddr d
   jz .clear.4
   push rax
   call .clear.2
@@ -64,12 +59,9 @@ set:
 .clear.move:
   push rax
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  xor rax, rax
-  mov eax, [rdx + object.content]
-  shl rax, 4
+  addr_from_id d, a
+  ldaddr a, [rdx + object.content]
+  testaddr a
   jz .clear.move.1
   call .clear.move.2
 .clear.move.1:
@@ -78,17 +70,15 @@ set:
   ret
 .clear.move.2:
   mov rdx, rax
-  xor rax, rax
-  mov eax, [rdx + object.internal.content + 4]
-  shl rax, 4
+  ldaddr a, [rdx + object.internal.content + word.size]
+  testaddr a
   jz .clear.move.3
   push rdx
   call .clear.move.2
   pop rdx
 .clear.move.3:
-  xor rax, rax
-  mov eax, [rdx + object.internal.content + 8]
-  shl rax, 4
+  ldaddr a, [rdx + object.internal.content + word.size * 2]
+  testaddr a
   jz .clear.move.4
   push rdx
   call .clear.move.2
@@ -106,40 +96,42 @@ set:
   push rdx
   push rsi
   push rdi
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rax, rax
-  mov eax, [rsi + object.content]
-  mov edi, edx
-.find.1:
-  shl rax, 4
+  addr_from_id si, a
+  clear_before_ld a
+  ldaddr a, [rsi + object.content]
+  testaddr a
   jz .find.4
+  movid di, d
+.find.1:
   mov rsi, rax
-  mov eax, [rsi + object.internal.content]
-  mov edx, edi
+  ldid a, [rsi + object.internal.content]
+  movid d, di
   call objects.lt
-  test eax, eax
+  testid a
   jz .find.2
   ; [si:o.i.c] < value
-  xor rax, rax
-  mov eax, [rsi + object.internal.content + 8]
+  clear_before_ld a
+  ldaddr a, [rsi + object.internal.content + word.size * 2]
+  testaddr a
+  jz .find.4
   jmp .find.1
 .find.2:
-  mov eax, edi
-  mov edx, [rsi + object.internal.content]
+  movid a, di
+  ldid d, [rsi + object.internal.content]
   call objects.lt
-  test eax, eax
+  testid a
   jz .find.3
   ; [si:o.i.c] > value
-  xor rax, rax
-  mov eax, [rsi + object.internal.content + 4]
+  clear_before_ld a
+  ldaddr a, [rsi + object.internal.content + word.size]
+  testaddr a
+  jz .find.4
   jmp .find.1
 .find.3:
-  mov rax, 1
+  ldt a
   jmp .find.5
 .find.4:
-  xor rax, rax
+  ldnil a
 .find.5:
   pop rdi
   pop rsi
@@ -155,18 +147,15 @@ set:
   push rsi
   push rdi
   push rbp
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  xor rsi, rsi
-  mov esi, [rcx + object.content]
-  shl rsi, 4
+  addr_from_id c, a
+  ldaddr si, [rcx + object.content]
+  testaddr si
   jnz .insert.1
   call objects.new.chunk
-  mov [rax + object.internal.content], edx
-  shr rax, 4
-  mov [rcx + object.content], eax
-  mov eax, edx
+  stid [rax + object.internal.content], d
+  id_from_addr a
+  stid [rcx + object.content], a
+  movid a, d
   call objects.ref
   pop rbp
   pop rdi
@@ -174,74 +163,73 @@ set:
   pop rdx
   pop rcx
   pop rax
+  ret
 .insert.1:
   call stack.new
-  mov ebp, eax
-  mov edi, edx
+  movid bp, a
+  movid di, d
 .insert.2:
   ; c: address of the set
   ; si: address of the current node
   ; di: value id
   ; bp: stack id indicates path
-  mov eax, [rsi + object.internal.content]
-  mov edx, edi
+  ldid a, [rsi + object.internal.content]
+  movid d, di
   call objects.lt
-  test eax, eax
+  testid a
   jz .insert.3
   ; [si:o.i.c.] < value
   ; push node, true
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  mov edx, 1
+  ldt d
   call stack.push.move
-  xor rax, rax
-  mov eax, [rsi + object.internal.content + 8]
-  shl rax, 4
+  ldaddr a, [rsi + object.internal.content + word.size * 2]
+  testaddr a
   mov rsi, rax
   ; then, if node->right != nil, continue node <- node->right
   jnz .insert.2
   ; if node->right == nil, node->right <- new and balance
   call objects.new.chunk
-  mov [rax + object.internal.content], edi
-  shr rax, 4
-  mov [rsi + object.internal.content + 8], eax
+  stid [rax + object.internal.content], di
+  id_from_addr a
+  stid [rsi + object.internal.content + word.size * 2], a
   jmp .insert.4
 .insert.3:
-  mov eax, edi
-  mov edx, [rsi + object.internal.content]
+  movid a, di
+  ldid d, [rsi + object.internal.content]
   call objects.lt
-  test eax, eax
+  testid a
   ; if it found in the set, break and end without balance
   jz .insert.5
   ; [si:o.i.c.] > value
   ; push node, false
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
   xor edx, edx
   call stack.push.move
-  xor rax, rax
-  mov eax, [rsi + object.internal.content + 4]
-  shl rax, 4
+  ldaddr a, [rsi + object.internal.content + word.size]
+  testaddr a
   mov rsi, rax
   ; then, if node->left != nil, continue node <- node->left
   jnz .insert.2
   call objects.new.chunk
-  mov [rax + object.internal.content], edi
-  shr rax, 4
-  mov [rsi + object.internal.content + 4], eax
+  stid [rax + object.internal.content], di
+  id_from_addr a
+  stid [rsi + object.internal.content + word.size], a
 .insert.4:
-  mov eax, [rcx + object.content]
-  mov edx, ebp
+  ldid a, [rcx + object.content]
+  movid d, bp
   call .insert.balance
-  mov [rcx + object.content], eax
-  mov eax, edi
+  stid [rcx + object.content], a
+  movid a, di
   call objects.ref
 .insert.5:
-  mov eax, ebp
+  movid a, bp
   call stack.clear.move
   call objects.unref
   pop rbp
@@ -261,89 +249,85 @@ set:
   push rsi
   push rdi
   push rbp
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  xor rsi, rsi
-  mov esi, [rcx + object.content]
-  shl rsi, 4
+  addr_from_id c, a
+  ldaddr si, [rcx + object.content]
+  testaddr si
   jnz .insert.move.1
   call objects.new.chunk
-  mov [rax + object.internal.content], edx
-  shr rax, 4
-  mov [rcx + object.content], eax
+  stid [rax + object.internal.content], d
+  id_from_addr a
+  stid [rcx + object.content], a
   pop rbp
   pop rdi
   pop rsi
   pop rdx
   pop rcx
   pop rax
+  ret
 .insert.move.1:
   call stack.new
-  mov ebp, eax
-  mov edi, edx
+  movid bp, a
+  movid di, d
 .insert.move.2:
   ; c: address of the set
   ; si: address of the current node
   ; di: value id
   ; bp: stack id indicates path
-  mov eax, [rsi + object.internal.content]
-  mov edx, edi
+  ldid a, [rsi + object.internal.content]
+  movid d, di
   call objects.lt
-  test eax, eax
+  testid a
   jz .insert.move.3
   ; [si:o.i.c.] < value
   ; push node, true
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  mov edx, 1
+  ldt d
   call stack.push.move
-  xor rax, rax
-  mov eax, [rsi + object.internal.content + 8]
-  shl rax, 4
+  ldaddr a, [rsi + object.internal.content + word.size * 2]
+  testaddr a
   mov rsi, rax
   ; then, if node->right != nil, continue node <- node->right
   jnz .insert.move.2
   ; if node->right == nil, node->right <- new and balance
   call objects.new.chunk
-  mov [rax + object.internal.content], edi
-  shr rax, 4
-  mov [rsi + object.internal.content + 8], eax
+  stid [rax + object.internal.content], di
+  id_from_addr a
+  stid [rsi + object.internal.content + word.size * 2], a
   jmp .insert.move.4
 .insert.move.3:
-  mov eax, edi
-  mov edx, [rsi + object.internal.content]
+  movid a, di
+  ldid d, [rsi + object.internal.content]
   call objects.lt
-  test eax, eax
+  testid a
   ; if it found in the set, break and end without balance
   jz .insert.move.5
   ; [si:o.i.c.] > value
   ; push node, false
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
   xor edx, edx
   call stack.push.move
-  xor rax, rax
-  mov eax, [rsi + object.internal.content + 4]
-  shl rax, 4
+  ldaddr a, [rsi + object.internal.content + word.size]
+  testaddr a
   mov rsi, rax
   ; then, if node->left != nil, continue node <- node->left
   jnz .insert.move.2
   call objects.new.chunk
-  mov [rax + object.internal.content], edi
-  shr rax, 4
-  mov [rsi + object.internal.content + 4], eax
+  stid [rax + object.internal.content], di
+  id_from_addr a
+  stid [rsi + object.internal.content + word.size], a
 .insert.move.4:
-  mov eax, [rcx + object.content]
-  mov edx, ebp
+  ldid a, [rcx + object.content]
+  movid d, bp
   call .insert.balance
-  mov [rcx + object.content], eax
+  stid [rcx + object.content], a
 .insert.move.5:
-  mov eax, ebp
+  movid a, bp
   call stack.clear.move
   call objects.unref
   pop rbp
@@ -367,24 +351,22 @@ set:
   ; c: stack id
   ; si: address of the new-node
   ; di: root node id
-  mov edi, eax
+  movid di, a
   ; while path.len > 0
-  mov eax, edx
+  movid a, d
   call stack.empty
-  test eax, eax
+  test rax, rax
   jnz .insert.balance.8
-  mov ecx, edx
-  xor esi, esi
+  movid c, d
+  ldnil si
 .insert.balance.1:
   ; pnode, dir <- path.pop()
-  mov eax, ecx
+  movid a, c
   call stack.pop.move
-  mov edx, eax
-  mov eax, ecx
+  movid d, a
+  movid a, c
   call stack.pop.move
-  xor rbx, rbx
-  mov ebx, eax
-  shl rbx, 4
+  addr_from_id b, a
   ; if dir == LEFT: pnode.balance++ else: pnode.balance--
   ; note: dir == 0(LEFT) or dir == 1(RIGHT).
   add edx, edx
@@ -398,16 +380,14 @@ set:
   cmp dl, 1
   jng .insert.balance.3
   ; if pnode.left.balance < 0:
-  xor rdx, rdx
-  mov edx, [rbx + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rbx + object.internal.content + word.size]
   cmp byte [rdx + object.internal.padding], 0
   jnl .insert.balance.2
   ; pnode.left <- rotate.left pnode.left
   mov rax, rdx
   call .rotate.left
-  shr rax, 4
-  mov [rbx + object.internal.content + 4], eax
+  id_from_addr a
+  stid [rbx + object.internal.content + word.size], a
   ; new-node <- rotate.right pnode
   mov rax, rbx
   call .rotate.right
@@ -432,16 +412,14 @@ set:
   cmp dl, -1
   jnl .insert.balance.5
   ; if pnode.right.balance > 0:
-  xor rdx, rdx
-  mov edx, [rbx + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rbx + object.internal.content + word.size * 2]
   cmp byte [rdx + object.internal.padding], 0
   jng .insert.balance.4
   ; pnode.right <- rotate.right pnode.right
   mov rax, rdx
   call .rotate.right
-  shr rax, 4
-  mov [rbx + object.internal.content + 8], eax
+  id_from_addr a
+  stid [rbx + object.internal.content + word.size * 2], a
   ; new-node <- rotate.left pnode
   mov rax, rbx
   call .rotate.left
@@ -462,37 +440,35 @@ set:
   ; break
   jmp .insert.balance.6
 .insert.balance.5:  ; wend
-  mov eax, ecx
+  movid a, c
   call stack.empty
-  test eax, eax
+  testid a
   jz .insert.balance.1
 .insert.balance.6:
   ; if path.len > 0:
-  mov eax, ecx
+  movid a, c
   call stack.empty
-  test eax, eax
+  testid a
   jnz .insert.balance.7
   ; gnode, gdir <- path.pop()
-  mov eax, ecx
+  movid a, c
   call stack.pop.move
-  xor rdx, rdx
-  mov edx, eax
-  mov eax, ecx
+  clear_before_ld d
+  movid d, a
+  movid a, c
   call stack.pop.move
-  xor rbx, rbx
-  mov ebx, eax
-  shl rbx, 4
+  addr_from_id b, a
   ; if gdir == LEFT: gnode.left <- new-node else: gnode.right <- new-node
-  shr rsi, 4
-  mov [rbx + object.internal.content + 4 + rdx * 4], esi
+  id_from_addr si
+  stid [rbx + object.internal.content + word.size + rdx * word.size], si
   jmp .insert.balance.8
 .insert.balance.7:
   ; elif new-node is not nil: return new-node
-  shr rsi, 4
+  id_from_addr si
   jz .insert.balance.8
-  mov edi, esi
+  movid di, si
 .insert.balance.8:
-  mov eax, edi
+  movid a, di
   pop rdi
   pop rsi
   pop rdx
@@ -510,61 +486,62 @@ set:
   push rsi
   push rdi
   push rbp
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
+  addr_from_id c, a
   ; if root-node == nil: do nothing
-  xor rsi, rsi
-  mov esi, [rcx + object.content]
-  shl rsi, 4
+  ldaddr si, [rcx + object.content]
+  testaddr si
   jz .remove.12
   call stack.new
-  mov ebp, eax
-  mov edi, edx
+  movid bp, a
+  movid di, d
   ; c: address of the set
   ; si: address of the current node
   ; di: value id
   ; bp: stack id indicates path
 .remove.1:
   ; while node != nil:
-  mov eax, [rsi + object.internal.content]
-  mov edx, edi
+  ldid a, [rsi + object.internal.content]
+  movid d, di
   call objects.lt
-  test eax, eax
+  testid a
   jz .remove.2
   ; [si:o.i.c.] < value
   ; push node, true
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  mov edx, 1
+  ldt d
   call stack.push.move
   ; node <- node.right
-  mov eax, [rsi + object.internal.content + 8]
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
+%ifdef OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size * 2]
+%else  ; OBJECT_32_BYTES
+  ldid a, [rsi + object.internal.content + word.size * 2]
+  addr_from_id si, a
+%endif  ; OBJECT_32_BYTES
   jmp .remove.3
 .remove.2:
-  mov eax, edi
-  mov edx, [rsi + object.internal.content]
+  movid a, di
+  ldid d, [rsi + object.internal.content]
   call objects.lt
-  test eax, eax
+  testid a
   jz .remove.4
   ; [si:o.i.c] > value
   ; push node, false
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  xor edx, edx
+  ldnil d
   call stack.push.move
   ; node <- node.left
-  mov eax, [rsi + object.internal.content + 4]
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
+%ifdef OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size]
+%else  ; OBJECT_32_BYTES
+  ldid a, [rsi + object.internal.content + word.size]
+  addr_from_id si, a
+%endif  ; OBJECT_32_BYTES
 .remove.3:
   ; wend
   ; test rsi, rsi ;  test not needed; the shl sets/clears flags.z
@@ -572,91 +549,90 @@ set:
   jmp .remove.11  ; if not found: dispose stack and return.
 .remove.4:
   ; [si:o.i.c] == value
-  mov eax, [rsi + object.internal.content]
+  ldid a, [rsi + object.internal.content]
   call objects.unref
   ; if it has childlen:
-  mov eax, [rsi + object.internal.content + 4]
-  test eax, eax
+  ldid a, [rsi + object.internal.content + word.size]
+  testid a
   jz .remove.7
-  mov eax, [rsi + object.internal.content + 8]
-  test eax, eax
+  ldid a, [rsi + object.internal.content + word.size * 2]
+  testid a
   jz .remove.7
   ; find node.right.left.left.left. ... .left that is not nil
   ; push node, true
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  mov edx, 1
+  ldt d
   call stack.push.move
   ; that <- node.right
-  xor rbx, rbx
-  mov ebx, [rsi + object.internal.content + 8]
-  shl rbx, 4
+  ldaddr b, [rsi + object.internal.content + word.size * 2]
 .remove.5:
   ; while that.left != nil:
-  mov eax, [rbx + object.internal.content + 4]
-  test eax, eax
+  ldid a, [rbx + object.internal.content + word.size]
+  testid a
   jz .remove.6
   ; push that, false
-  mov eax, ebp
+  movid a, bp
   mov rdx, rbx
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  xor edx, edx
+  ldnil d
   call stack.push.move
   ; that <- that.left
-  mov eax, [rbx + object.internal.content + 4]
-  xor rbx, rbx
-  mov ebx, eax
-  shl rbx, 4
+%ifdef OBJECT_32_BYTES
+  ldaddr b, [rbx + object.internal.content + word.size]
+%else  ; OBJECT_32_BYTES
+  ldid a, [rbx + object.internal.content + word.size]
+  addr_from_id b, a
+%endif  ; OBJECT_32_BYTES
   jmp .remove.5
 .remove.6:
   ; node.value <- that.value
-  mov edx, [rbx + object.internal.content]
-  mov [rsi + object.internal.content], edx
+  ldid d, [rbx + object.internal.content]
+  stid [rsi + object.internal.content], d
   ; node <- that
   mov rsi, rbx
 .remove.7:
   ; if path.len != 0: pnode <- path.top().node else: pnode <- nil
-  xor rbx, rbx
-  mov eax, ebp
+  ldnil b
+  movid a, bp
   call stack.empty
-  test eax, eax
+  testid a
   jnz .remove.8
-  mov eax, ebp
+  movid a, bp
   mov rdx, 1
   call stack.nth
-  mov ebx, eax
-  shl rbx, 4
+  addr_from_id b, a
 .remove.8:
   ; now, (node.left && node.right) == nil
   ; if node.left == nil: node <- node.right else: node <- node.left
-  mov edx, [rsi + object.internal.content + 4]
-  test edx, edx
+  ldid d, [rsi + object.internal.content + word.size]
+  testid d
   jnz .remove.9
-  mov edx, [rsi + object.internal.content + 8]
+  ldid d, [rsi + object.internal.content + word.size * 2]
 .remove.9:
   mov rax, rsi
   call objects.dispose.raw
   ; if root-node removed, root-node <- node
   test rbx, rbx
   jnz .remove.10
-  mov [rcx + object.content], edx
+  stid [rcx + object.content], d
   jmp .remove.11
 .remove.10:
   ; if dir == LEFT: pnode.left <- node else: pnode.right <- node
-  mov eax, ebp
+  movid a, bp
   call stack.top  ; it's safe; if stack is empty, ebx == nil
-  xor rdi, rdi
-  mov edi, eax
-  mov [rbx + object.internal.content + 4 + rdi * 4], edx
-  mov eax, [rcx + object.content]
-  mov edx, ebp
+  clear_before_ld di
+  movid di, a
+  stid [rbx + object.internal.content + word.size + rdi * word.size], d
+  ldid a, [rcx + object.content]
+  movid d, bp
   call .remove.balance
-  mov [rcx + object.content], eax
+  stid [rcx + object.content], a
 .remove.11:
-  mov eax, ebp
+  movid a, bp
   call stack.clear.move
   call objects.unref
 .remove.12:
@@ -679,61 +655,62 @@ set:
   push rsi
   push rdi
   push rbp
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
+  addr_from_id c, a
   ; if root-node == nil: do nothing
-  xor rsi, rsi
-  mov esi, [rcx + object.content]
-  shl rsi, 4
+  ldaddr si, [rcx + object.content]
+  testaddr si
   jz .remove.move.12
   call stack.new
-  mov ebp, eax
-  mov edi, edx
+  movid bp, a
+  movid di, d
   ; c: address of the set
   ; si: address of the current node
   ; di: value id
   ; bp: stack id indicates path
 .remove.move.1:
   ; while node != nil:
-  mov eax, [rsi + object.internal.content]
-  mov edx, edi
+  ldid a, [rsi + object.internal.content]
+  movid d, di
   call objects.lt
-  test eax, eax
+  testid a
   jz .remove.move.2
   ; [si:o.i.c.] < value
   ; push node, true
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  mov edx, 1
+  ldt d
   call stack.push.move
   ; node <- node.right
-  mov eax, [rsi + object.internal.content + 8]
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
+%ifdef OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size]
+%else  ; OBJECT_32_BYTES
+  ldid a, [rsi + object.internal.content + word.size]
+  addr_from_id si, a
+%endif  ; OBJECT_32_BYTES
   jmp .remove.move.3
 .remove.move.2:
-  mov eax, edi
-  mov edx, [rsi + object.internal.content]
+  movid a, di
+  ldid d, [rsi + object.internal.content]
   call objects.lt
-  test eax, eax
+  testid a
   jz .remove.move.4
   ; [si:o.i.c] > value
   ; push node, false
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  xor edx, edx
+  ldnil d
   call stack.push.move
   ; node <- node.left
-  mov eax, [rsi + object.internal.content + 4]
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
+%ifdef OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size]
+%else  ; OBJECT_32_BYTES
+  ldid a, [rsi + object.internal.content + word.size]
+  addr_from_id si, a
+%endif  ; OBJECT_32_BYTES
 .remove.move.3:
   ; wend
   ; test rsi, rsi ;  test not needed; the shl sets/clears flags.z
@@ -742,88 +719,87 @@ set:
 .remove.move.4:
   ; [si:o.i.c] == value
   ; if it has childlen:
-  mov eax, [rsi + object.internal.content + 4]
-  test eax, eax
+  ldid a, [rsi + object.internal.content + word.size]
+  testid a
   jz .remove.move.7
-  mov eax, [rsi + object.internal.content + 8]
-  test eax, eax
+  ldid a, [rsi + object.internal.content + word.size * 2]
+  testid a
   jz .remove.move.7
   ; find node.right.left.left.left. ... .left that is not nil
   ; push node, true
-  mov eax, ebp
+  movid a, bp
   mov rdx, rsi
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  mov edx, 1
+  ldt d
   call stack.push.move
   ; that <- node.right
-  xor rbx, rbx
-  mov ebx, [rsi + object.internal.content + 8]
-  shl rbx, 4
+  ldaddr b, [rsi + object.internal.content + word.size * 2]
 .remove.move.5:
   ; while that.left != nil:
-  mov eax, [rbx + object.internal.content + 4]
-  test eax, eax
+  ldid a, [rbx + object.internal.content + word.size]
+  testid a
   jz .remove.move.6
   ; push that, false
-  mov eax, ebp
+  movid a, bp
   mov rdx, rbx
-  shr rdx, 4
+  id_from_addr d
   call stack.push.move
-  xor edx, edx
+  ldnil d
   call stack.push.move
   ; that <- that.left
-  mov eax, [rbx + object.internal.content + 4]
-  xor rbx, rbx
-  mov ebx, eax
-  shl rbx, 4
+%ifdef OBJECT_32_BYTES
+  ldaddr b, [rbx + object.internal.content + word.size]
+%else  ; OBJECT_32_BYTES
+  ldid a, [rbx + object.internal.content + word.size]
+  addr_from_id b, a
+%endif  ; OBJECT_32_BYTES
   jmp .remove.move.5
 .remove.move.6:
   ; node.value <- that.value
-  mov edx, [rbx + object.internal.content]
-  mov [rsi + object.internal.content], edx
+  ldid d, [rbx + object.internal.content]
+  stid [rsi + object.internal.content], d
   ; node <- that
   mov rsi, rbx
 .remove.move.7:
   ; if path.len != 0: pnode <- path.top().node else: pnode <- nil
-  xor rbx, rbx
-  mov eax, ebp
+  ldnil b
+  movid a, bp
   call stack.empty
-  test eax, eax
+  testid a
   jnz .remove.move.8
-  mov eax, ebp
-  mov rdx, 1
+  movid a, bp
+  ldt d
   call stack.nth
-  mov ebx, eax
-  shl rbx, 4
+  addr_from_id b, a
 .remove.move.8:
   ; now, (node.left && node.right) == nil
   ; if node.left == nil: node <- node.right else: node <- node.left
-  mov edx, [rsi + object.internal.content + 4]
-  test edx, edx
+  ldid d, [rsi + object.internal.content + word.size]
+  testid d
   jnz .remove.move.9
-  mov edx, [rsi + object.internal.content + 8]
+  ldid d, [rsi + object.internal.content + word.size * 2]
 .remove.move.9:
   mov rax, rsi
   call objects.dispose.raw
   ; if root-node removed, root-node <- node
   test rbx, rbx
   jnz .remove.move.10
-  mov [rcx + object.content], edx
+  stid [rcx + object.content], d
   jmp .remove.move.11
 .remove.move.10:
   ; if dir == LEFT: pnode.left <- node else: pnode.right <- node
-  mov eax, ebp
+  movid a, bp
   call stack.top  ; it's safe; if stack is empty, ebx == nil
-  xor rdi, rdi
-  mov edi, eax
-  mov [rbx + object.internal.content + 4 + rdi * 4], edx
-  mov eax, [rcx + object.content]
-  mov edx, ebp
+  clear_before_ld di
+  movid di, a
+  stid [rbx + object.internal.content + word.size + rdi * word.size], d
+  ldid a, [rcx + object.content]
+  movid d, bp
   call .remove.balance
-  mov [rcx + object.content], eax
+  stid [rcx + object.content], a
 .remove.move.11:
-  mov eax, ebp
+  movid a, bp
   call stack.clear.move
   call objects.unref
 .remove.move.12:
@@ -848,25 +824,23 @@ set:
   ; c: stack id
   ; si: address of the new-node
   ; di: root node id
-  mov edi, eax
-  mov ecx, edx
+  movid di, a
+  movid c, d
   ; while path.len > 0
 .remove.balance.1:
-  mov eax, ecx
+  movid a, c
   call stack.empty
-  test eax, eax
+  testid a
   jnz .remove.balance.10
   ; new-node <- nil
-  xor rsi, rsi
+  ldnil si
   ; pnode, dir <- path.pop()
-  mov eax, ecx
+  movid a, c
   call stack.pop.move
-  mov edx, eax
-  mov eax, ecx
+  movid d, a
+  movid a, c
   call stack.pop.move
-  xor rbx, rbx
-  mov ebx, eax
-  shl rbx, 4
+  addr_from_id b, a
   ; if dir == LEFT: pnode.balance-- else: pnode.balance++
   add edx, edx
   dec edx
@@ -876,16 +850,14 @@ set:
   cmp dl, 1
   jng .remove.balance.4
   ; if pnode.left.balance < 0:
-  xor rdx, rdx
-  mov edx, [rbx + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rbx + object.internal.content + word.size]
   cmp byte [rdx + object.internal.padding], 0
   jnl .remove.balance.2
   ; pnode.left <- rotate.left pnode.left
   mov rax, rdx
   call .rotate.left
-  shr rax, 4
-  mov [rbx + object.internal.content + 4], eax
+  id_from_addr a
+  stid [rbx + object.internal.content + word.size], a
   ; new-node <- rotate.right pnode
   mov rax, rbx
   call .rotate.right
@@ -914,16 +886,14 @@ set:
   cmp dl, -1
   jnl .remove.balance.7
   ; if pnode.right.balance > 0:
-  xor rdx, rdx
-  mov edx, [rbx + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rbx + object.internal.content + word.size * 2]
   cmp byte [rdx + object.internal.padding], 0
   jng .remove.balance.5
   ; pnode.right <- rotate.right pnode.right
   mov rax, rdx
   call .rotate.right
-  shr rax, 4
-  mov [rbx + object.internal.content + 8], eax
+  id_from_addr a
+  stid [rbx + object.internal.content + word.size * 2], a
   ; new-node <- rotate.left pnode
   mov rax, rbx
   call .rotate.left
@@ -956,34 +926,32 @@ set:
   test rsi, rsi
   jz .remove.balance.1
   ; if path.len == 0: return new-node
-  mov eax, ecx
+  movid a, c
   call stack.empty
-  test eax, eax
+  testid a
   jz .remove.balance.9
-  shr rsi, 4
-  mov edi, esi
+  id_from_addr si
+  movid di, si
   jmp .remove.balance.10
 .remove.balance.9:
   ; gnode, gdir <- path.top()
-  mov eax, ecx
+  movid a, c
   mov rdx, 1
   call stack.nth
-  xor rbx, rbx
-  mov ebx, eax
-  shl rbx, 4
-  mov eax, ecx
+  addr_from_id b, a
+  movid a, c
   call stack.top
   ; if gdir == LEFT: gnode.left <- new-node else: gnode.right <- new-node
-  xor rdx, rdx
-  mov edx, eax
+  clear_before_ld d
+  movid d, a
   mov rax, rsi
-  shr rax, 4
-  mov [rbx + object.internal.content + 4 + rdx * 4], eax
+  id_from_addr a
+  stid [rbx + object.internal.content + word.size + rdx * word.size], a
   ; if new-node.balance != 0: break
   cmp byte [rsi + object.internal.padding], 0
   je .remove.balance.1
 .remove.balance.10:
-  mov eax, edi
+  movid a, di
   pop rdi
   pop rsi
   pop rcx
@@ -995,15 +963,13 @@ set:
   push rcx
   push rdx
   ; lnode <- node.left
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size]
   ; node.left <- lnode.right
-  mov ecx, [rdx + object.internal.content + 8]
-  mov [rax + object.internal.content + 4], ecx
+  ldid c, [rdx + object.internal.content + word.size * 2]
+  stid [rax + object.internal.content + word.size], c
   ; lnode.right <- node
-  shr rax, 4
-  mov [rdx + object.internal.content + 8], eax
+  id_from_addr a
+  stid [rdx + object.internal.content + word.size * 2], a
   ; return lnode
   mov rax, rdx
   pop rdx
@@ -1015,15 +981,13 @@ set:
   push rcx
   push rdx
   ; rnode <- node.right
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size * 2]
   ; node.right <- rnode.left
-  mov ecx, [rdx + object.internal.content + 4]
-  mov [rax + object.internal.content + 8], ecx
+  ldid c, [rdx + object.internal.content + word.size]
+  stid [rax + object.internal.content + word.size * 2], c
   ; rnode.left <- node
-  shr rax, 4
-  mov [rdx + object.internal.content + 4], eax
+  id_from_addr a
+  stid [rdx + object.internal.content + word.size], a
   ; return rnode
   mov rax, rdx
   pop rdx
@@ -1035,35 +999,23 @@ set:
   push rdx
   cmp byte [rax + object.internal.padding], 1
   jne .balance.update.1
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size * 2]
   mov byte [rdx + object.internal.padding], -1
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size]
   mov byte [rdx + object.internal.padding], 0
   jmp .balance.update.3
 .balance.update.1:
   cmp byte [rax + object.internal.padding], -1
   jne .balance.update.2
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size * 2]
   mov byte [rdx + object.internal.padding], 0
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size]
   mov byte [rdx + object.internal.padding], 1
   jmp .balance.update.3
 .balance.update.2:
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 8]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size * 2]
   mov byte [rdx + object.internal.padding], 0
-  xor rdx, rdx
-  mov edx, [rax + object.internal.content + 4]
-  shl rdx, 4
+  ldaddr d, [rax + object.internal.content + word.size]
   mov byte [rdx + object.internal.padding], 0
 .balance.update.3:
   mov byte [rax + object.internal.padding], 0

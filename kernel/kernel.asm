@@ -34,6 +34,8 @@ end:
   hlt
   jmp end
 
+%include "macro.asm"
+
 %include "console-out.asm"
 %include "descriptor-tables.asm"
 %include "device.asm"

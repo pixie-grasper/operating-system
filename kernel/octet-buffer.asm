@@ -12,7 +12,7 @@ octet_buffer:
 .new:
   call objects.new.raw
   mov byte [rax + object.class], object.octetbuffer
-  shr rax, 4
+  id_from_addr a
   ret
 
 .dispose.raw:
@@ -26,13 +26,11 @@ octet_buffer:
   mov r8, [rax + object.content]
   test r8, r8
   jz .dispose.raw.2
-  mov rcx, 4096 / 4
+  mov ecx, 4096 / 4
 .dispose.raw.1:  ; PDPT
-  xor rdx, rdx
-  mov edx, [r8]
-  shl rdx, 4
+  ldaddr d, [r8]
   call .dispose.raw.3
-  add rax, 4
+  add r8, word.size
   dec ecx
   jnz .dispose.raw.1
 .dispose.raw.2:
@@ -45,24 +43,20 @@ octet_buffer:
   pop rax
   ret
 .dispose.raw.3:  ; PD
-  mov rdi, 4096 / 4
+  mov edi, 4096 / 4
 .dispose.raw.4:
-  xor rsi, rsi
-  mov esi, [rdx]
-  shl rsi, 4
+  ldaddr si, [rdx]
   call .dispose.raw.5
-  add rdx, 4
+  add rdx, word.size
   dec edi
   jnz .dispose.raw.4
   ret
 .dispose.raw.5:  ; PT
-  mov rbp, 4096 / 4
+  mov ebp, 4096 / 4
 .dispose.raw.6:
-  xor rax, rax
-  mov eax, [rsi]
-  shl rax, 4
+  ldaddr a, [rsi]
   call memory.disposepage@s
-  add rsi, 4
+  add rsi, word.size
   dec ebp
   jnz .dispose.raw.6
   ret
@@ -75,33 +69,39 @@ octet_buffer:
   push rcx
   push rdx
   push rsi
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
+  addr_from_id c, a
   mov rcx, [rcx + object.content]
   test rcx, rcx
   jz .index.1
   mov rax, rdx
+%ifdef OBJECT_32_BYTES
+  shr rax, 9 + 9 + 9 + 12
+%else  ; OBJECT_32_BYTES
   shr rax, 10 + 10 + 10 + 12
+%endif
   jnz .index.1  ; invalid index
   mov rax, rdx
+%ifdef OBJECT_32_BYTES
+  shr rax, 9 + 9 + 12
+%else  ; OBJECT_32_BYTES
   shr rax, 10 + 10 + 12
-  xor rsi, rsi
-  mov esi, [rcx + rax * 4]
-  shl rsi, 4
+%endif
+  ldaddr si, [rcx + rax * word.size]
   jz .index.1
   mov rax, rdx
+%ifdef OBJECT_32_BYTES
+  shr rax, 9 + 12
+%else  ; OBJECT_32_BYTES
   shr rax, 10 + 12
+%endif  ; OBJECT_32_BYTES
   and eax, 0x03ff
-  xor rcx, rcx
-  mov ecx, [rsi + rax * 4]
-  shl rcx, 4
+  ldaddr c, [rsi + rax * word.size]
   jz .index.1
   mov rax, rdx
   shr rax, 12
   and eax, 0x03ff
   xor rsi, rsi
-  mov esi, [rcx + rax * 4]
+  mov esi, [rcx + rax * word.size]
   shl rsi, 4
   jz .index.1
   and rdx, 0x0fff
@@ -124,9 +124,7 @@ octet_buffer:
   push rdx
   push rsi
   push rdi
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
+  addr_from_id c, a
   mov rsi, [rcx + object.content]
   test rsi, rsi
   jnz .newindex.1
@@ -137,45 +135,51 @@ octet_buffer:
 .newindex.1:
   mov rcx, rsi
   mov rdi, rdx
+%ifdef OBJECT_32_BYTES
+  shr rdi, 9 + 9 + 9 + 12
+%else  ; OBJECT_32_BYTES
   shr rdi, 10 + 10 + 10 + 12
+%endif  ; OBJECT_32_BYTES
   jnz .newindex.nil  ; invalid index
   mov rdi, rdx
+%ifdef OBJECT_32_BYTES
+  shr rdi, 9 + 9 + 12
+%else  ; OBJECT_32_BYTES
   shr rdi, 10 + 10 + 12
-  xor rsi, rsi
-  mov esi, [rcx + rdi * 4]
-  shl rsi, 4
+%endif  ; OBJECT_32_BYTES
+  ldaddr si, [rcx + rdi * word.size]
   jnz .newindex.2
   call memory.newpage@s
   call memory.zerofill
   mov rsi, rax
-  shr rax, 4
-  mov [rcx + rdi * 4], eax
+  id_from_addr a
+  stid [rcx + rdi * word.size], a
 .newindex.2:
   mov rdi, rdx
+%ifdef OBJECT_32_BYTES
+  shr rdi, 9 + 12
+%else  ; OBJECT_32_BYTES
   shr rdi, 10 + 12
+%endif  ; OBJECT_32_BYTES
   and rdi, 0x03ff
-  xor rcx, rcx
-  mov ecx, [rsi + rdi * 4]
-  shl rcx, 4
+  ldaddr c, [rsi + rdi * word.size]
   jnz .newindex.3
   call memory.newpage@s
   call memory.zerofill
   mov rcx, rax
-  shr rax, 4
-  mov [rsi + rdi * 4], eax
+  id_from_addr a
+  stid [rsi + rdi * word.size], a
 .newindex.3:
   mov rdi, rdx
   shr rdi, 12
   and rdi, 0x03ff
-  xor rsi, rsi
-  mov esi, [rcx + rdi * 4]
-  shl rsi, 4
+  ldaddr si, [rcx + rdi * word.size]
   jnz .newindex.4
   call memory.newpage@s
   call memory.zerofill
   mov rsi, rax
-  shr rax, 4
-  mov [rcx + rdi * 4], eax
+  id_from_addr a
+  stid [rcx + rdi * word.size], a
 .newindex.4:
   and rdx, 0x0fff
   lea rax, [rsi + rdx]

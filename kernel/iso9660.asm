@@ -12,17 +12,13 @@ iso9660:
   push rax
   push rcx
   push rdx
-  xor rdx, rdx
   mov rcx, rax
-  mov edx, [rax + object.content]
-  shl rdx, 4
-  mov eax, [rdx + object.internal.content + 4]
+  ldaddr d, [rax + object.content]
+  ldid a, [rdx + object.internal.content + word.size]
   call objects.unref
   mov rax, rdx
   call objects.dispose.raw
-  xor rax, rax
-  mov eax, [rcx + object.content + 4]
-  shl rax, 4
+  ldaddr a, [rcx + object.content + word.size]
   call objects.dispose.raw
   pop rdx
   pop rcx
@@ -31,13 +27,13 @@ iso9660:
 
 .file.status.dispose.raw:
   push rax
-  mov edx, [rax + object.content + 4]
-  mov eax, [rax + object.content]
+  push rdx
+  ldaddr d, [rax + object.content + word.size]
+  ldid a, [rax + object.content]
   call objects.unref
-  xor rax, rax
-  mov eax, edx
-  shl rax, 4
+  mov rax, rdx
   call objects.dispose.raw
+  pop rdx
   pop rax
   ret
 
@@ -47,10 +43,10 @@ iso9660:
   push rcx
   push rdx
   push rsi
-  mov esi, eax
+  movid si, a
   mov edx, 2048 * 16
 .begin.1:
-  mov eax, esi
+  movid a, si
   call device.index
   test rax, rax
   jz .begin.3
@@ -67,18 +63,18 @@ iso9660:
   mov edx, [rax + 156 + 10]  ; length
   call objects.new.chunk
   mov [rax + object.internal.content], ecx
-  mov [rax + object.internal.content + 8], edx
-  shr rax, 4
-  mov ecx, eax
+  mov [rax + object.internal.content + word.size * 2], edx
+  id_from_addr a
+  movid c, a
   call objects.new.chunk
-  mov [rax + object.internal.content], esi
-  shr rax, 4
-  mov esi, eax
+  stid [rax + object.internal.content], si
+  id_from_addr a
+  movid si, a
   call objects.new.raw
   mov byte [rax + object.class], object.iso9660.iterator
-  mov [rax + object.content], esi
-  mov [rax + object.content + 4], ecx
-  shr rax, 4
+  stid [rax + object.content], si
+  stid [rax + object.content + word.size], c
+  id_from_addr a
 .begin.3:
   pop rsi
   pop rdx
@@ -92,37 +88,29 @@ iso9660:
   push rcx
   push rdx
   push rsi
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rcx, rcx
-  mov ecx, [rsi + object.content + 4]
-  shl rcx, 4
+  addr_from_id si, a
+  ldaddr c, [rsi + object.content + word.size]
   xor rbx, rbx
-  mov ebx, [rcx + object.internal.content + 4]
-  cmp ebx, [rcx + object.internal.content + 8]
+  mov ebx, [rcx + object.internal.content + word.size]
+  cmp ebx, [rcx + object.internal.content + word.size * 2]
   jae .iterator.succ.1
   xor rdx, rdx
   mov edx, [rcx + object.internal.content]
   shl rdx, 11
   xor rax, rax
-  mov eax, [rcx + object.internal.content + 4]
+  mov eax, [rcx + object.internal.content + word.size]
   add rdx, rax
-  xor rax, rax
-  mov eax, [rsi + object.content]
-  shl rax, 4
-  mov eax, [rax + object.internal.content]
+  ldaddr a, [rsi + object.content]
+  ldid a, [rax + object.internal.content]
   call device.index
-  mov esi, [rax]
-  and esi, 0xff
-  add [rcx + object.internal.content + 4], esi
-  xor rdx, rdx
-  mov edx, [rsi + object.content]
-  shl rdx, 4
-  mov eax, [rdx + object.internal.content + 4]
+  xor rsi, rsi
+  mov sil, [rax]
+  add [rcx + object.internal.content + word.size], esi
+  ldaddr d, [rsi + object.content]
+  ldid a, [rdx + object.internal.content + word.size]
   call objects.unref
-  xor eax, eax
-  mov [rdx + object.internal.content + 4], eax
+  ldnil a
+  stid [rdx + object.internal.content + word.size], a
 .iterator.succ.1:
   pop rsi
   pop rdx
@@ -138,21 +126,15 @@ iso9660:
   push rcx
   push rdx
   push rsi
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rcx, rcx
-  mov ecx, [rsi + object.content]
-  shl rcx, 4
-  mov eax, [rcx + object.internal.content]
-  xor rbx, rbx
-  mov ebx, [rsi + object.content + 4]
-  shl rbx, 4
+  addr_from_id si, a
+  ldaddr c, [rsi + object.content]
+  ldid a, [rcx + object.internal.content]
+  ldaddr b, [rsi + object.content + word.size]
   xor rdx, rdx
   mov edx, [rbx + object.internal.content]
   shl rdx, 11
   xor rcx, rcx
-  mov ecx, [rbx + object.internal.content + 4]
+  mov ecx, [rbx + object.internal.content + word.size]
   add rdx, rcx
   add rdx, 25
   call device.index
@@ -175,34 +157,28 @@ iso9660:
   push rsi
   push rdi
   push rbp
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rbp, rbp
-  mov ebp, [rsi + object.content]
-  shl rbp, 4
-  mov eax, [rbp + object.internal.content]
-  mov ebp, eax
-  xor rbx, rbx
-  mov ebx, [rsi + object.content + 4]
-  shl rbx, 4
+  addr_from_id si, a
+  ldaddr bp, [rsi + object.content]
+  ldid a, [rbp + object.internal.content]
+  movid bp, a
+  ldaddr b, [rsi + object.content + word.size]
   xor rdx, rdx
   mov edx, [rbx + object.internal.content]
   shl rdx, 11
   xor rcx, rcx
-  mov ecx, [rbx + object.internal.content + 4]
+  mov ecx, [rbx + object.internal.content + word.size]
   add rdx, rcx
   mov rbx, rdx
   call device.index
   xor rcx, rcx
   mov cl, [rax]
   call octet_buffer.new
-  mov esi, eax
+  movid si, a
   xor rdx, rdx
   call octet_buffer.newindex
   mov rdi, rax
   mov rdx, rbx
-  mov eax, ebp
+  movid a, bp
   call device.index.cp
   mov rbx, rdi
   add rbx, 33
@@ -227,7 +203,7 @@ iso9660:
   and ebx, ~3
   sub rdi, rbx
   mov [rdi + rdx], ecx
-  mov eax, esi
+  movid a, si
   pop rbp
   pop rdi
   pop rsi
@@ -243,30 +219,24 @@ iso9660:
   push rcx
   push rdx
   push rsi
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rcx, rcx
-  mov ecx, [rsi + object.content]
-  shl rcx, 4
-  mov eax, [rcx + object.internal.content + 4]
-  test eax, eax
+  addr_from_id si, a
+  ldaddr c, [rsi + object.content]
+  ldid a, [rcx + object.internal.content + word.size]
+  testid a
   jnz .iterator.deref.directory.end.2
-  mov eax, [rcx + object.internal.content]
+  ldid a, [rcx + object.internal.content]
   call objects.ref
-  xor rbx, rbx
-  mov ebx, [rsi + object.content + 4]
-  shl rbx, 4
+  ldaddr b, [rsi + object.content + word.size]
   xor rdx, rdx
   mov edx, [rbx + object.internal.content]
   shl rdx, 11
   xor rcx, rcx
-  mov ecx, [rbx + object.internal.content + 4]
+  mov ecx, [rbx + object.internal.content + word.size]
   add rdx, rcx
   mov rcx, 28
   sub rsp, 32
   mov rdi, rsp
-  mov esi, eax
+  movid si, a
   call device.index.cp
   jc .iterator.deref.directory.failed
   test byte [rdi + 25], 0x02  ; directory?
@@ -275,21 +245,21 @@ iso9660:
   mov edx, [rdi + 10]  ; length
   call objects.new.chunk
   mov [rax + object.internal.content], ecx
-  mov [rax + object.internal.content + 8], edx
-  shr rax, 4
-  mov ecx, eax
+  mov [rax + object.internal.content + word.size * 2], edx
+  id_from_addr a
+  movid c, a
   call objects.new.chunk
-  mov [rax + object.internal.content], esi
-  shr rax, 4
-  mov esi, eax
+  stid [rax + object.internal.content], si
+  id_from_addr a
+  movid si, a
   call objects.new.raw
   mov byte [rax + object.class], object.iso9660.iterator
-  mov [rax + object.content], esi
-  mov [rax + object.content + 4], ecx
-  shr rax, 4
+  stid [rax + object.content], si
+  stid [rax + object.content + word.size], c
+  id_from_addr a
   jmp .iterator.deref.directory.end
 .iterator.deref.directory.failed:
-  xor rax, rax
+  ldnil a
 .iterator.deref.directory.end:
   add rsp, 32
 .iterator.deref.directory.end.2:
@@ -306,20 +276,14 @@ iso9660:
   push rcx
   push rdx
   push rsi
-  xor rsi, rsi
-  mov esi, eax
-  shl rsi, 4
-  xor rcx, rcx
-  mov ecx, [rsi + object.content]
-  shl rcx, 4
-  mov eax, [rcx + object.internal.content + 4]
-  test eax, eax
+  addr_from_id si, a
+  ldaddr c, [rsi + object.content]
+  ldid a, [rcx + object.internal.content + word.size]
+  testid a
   jnz .iterator.deref.file.end.2
-  mov eax, [rcx + object.internal.content]
+  ldid a, [rcx + object.internal.content]
   call objects.ref
-  xor rbx, rbx
-  mov ebx, [rsi + object.content + 4]
-  shl rbx, 4
+  ldaddr b, [rsi + object.content + word.size]
   xor rdx, rdx
   mov edx, [rbx + object.internal.content]
   shl rdx, 11
@@ -329,21 +293,21 @@ iso9660:
   mov rcx, 28
   sub rsp, 32
   mov rdi, rsp
-  mov esi, eax
+  movid si, a
   call device.index.cp
   jc .iterator.deref.file.failed
   test byte [rdi + 25], 0x02  ; file?
   jnz .iterator.deref.file.failed
   call objects.new.chunk
-  mov [rax + object.internal.content], esi
+  stid [rax + object.internal.content], si
   mov qword [rax + object.internal.content + 4], .file.index
-  shr rax, 4
-  mov edx, eax
+  id_from_addr a
+  movid d, a
   call file.new
   call file.set.info
   jmp .iterator.deref.file.end
 .iterator.deref.file.failed:
-  xor rax, rax
+  ldnil a
 .iterator.deref.file.end:
   add rsp, 32
 .iterator.deref.file.end.2:
@@ -358,14 +322,10 @@ iso9660:
   push rax
   push rcx
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  xor rcx, rcx
-  mov ecx, [rdx + object.content + 4]
-  shl rcx, 4
-  mov eax, [rcx + object.internal.content + 4]
-  cmp eax, [rcx + object.internal.content + 8]
+  addr_from_id d, a
+  ldaddr c, [rdx + object.content + word.size]
+  mov eax, [rcx + object.internal.content + word.size]
+  cmp eax, [rcx + object.internal.content + word.size * 2]
   pop rdx
   pop rcx
   pop rax

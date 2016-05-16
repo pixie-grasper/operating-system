@@ -8,16 +8,16 @@
 file:
 .new:
   call .new.raw
-  shr rax, 4
+  id_from_addr a
   ret
 
 .new.raw:
   push rdx
   call octet_buffer.new
-  mov edx, eax
+  movid d, a
   call objects.new.raw
   mov byte [rax + object.class], object.file
-  mov [rax + object.content], edx
+  stid [rax + object.content], d
   pop rdx
   ret
 
@@ -25,16 +25,13 @@ file:
   push rax
   push rcx
   push rdx
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  mov eax, [rdx + object.content]
+  addr_from_id d, a
+  ldid a, [rdx + object.content]
   call objects.unref
-  xor rcx, rcx
-  mov ecx, [rdx + object.content + 4]
-  shl rcx, 4
+  ldaddr c, [rdx + object.content + word.size]
+  testaddr c
   jz .dispose.raw.1
-  mov eax, [rcx + object.internal.content]
+  ldid a, [rcx + object.internal.content]
   call objects.unref
   mov rax, rcx
   call objects.dispose.raw
@@ -49,17 +46,14 @@ file:
 .set.info:
   push rax
   push rcx
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  xor rax, rax
-  mov eax, [rcx + object.content + 4]
-  shl rax, 4
+  addr_from_id c, a
+  ldaddr a, [rcx + object.content + word.size]
+  testaddr a
   jz .set.info.1
-  mov eax, [rax + object.internal.content]
+  ldid a, [rax + object.internal.content]
   call objects.unref
 .set.info.1:
-  mov [rcx + object.content + 4], edx
+  stid [rcx + object.content + word.size], d
   pop rcx
   pop rax
   ret
@@ -72,26 +66,22 @@ file:
   push rdx
   push rsi
   push rdi
-  xor rdi, rdi
-  mov edi, eax
-  shl rdi, 4
-  mov eax, [rdi + object.content]
+  addr_from_id di, a
+  ldid a, [rdi + object.content]
   call octet_buffer.index
   test rax, rax
   jnz .index.end
-  xor rsi, rsi
-  mov esi, [rdi + object.content + 4]
-  shl rsi, 4
+  ldaddr si, [rdi + object.content + word.size]
   jz .index.end
   mov rcx, rdx
   and rdx, ~0x0fff
-  mov eax, [rdi + object.content]
+  ldid a, [rdi + object.content]
   call octet_buffer.newindex
   test rax, rax
   jz .index.end
   mov rdx, rcx
-  mov ecx, [rsi + object.internal.content]
-  call [rsi + object.internal.content + 4]
+  ldid c, [rsi + object.internal.content]
+  call [rsi + object.internal.content + word.size]
 .index.end:
   pop rdi
   pop rsi

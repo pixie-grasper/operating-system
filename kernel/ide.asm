@@ -100,26 +100,22 @@ ide:
   mov ebp, device.atapi
 .init.4:
   call device.new
-  xor rdx, rdx
-  mov edx, eax
-  shl rdx, 4
-  xor rax, rax
-  mov eax, [rdx + object.content + 4]
-  shl rax, 4
+  addr_from_id d, a
+  ldaddr a, [rdx + object.content + word.size]
   mov [rax + object.internal.content], ecx
-  mov [rax + object.internal.content + 4], ebx
+  mov [rax + object.internal.content + word.size], ebx
   mov [rax + object.internal.padding], bpl
-  shr rdx, 4
+  id_from_addr d
   push rcx
   mov ecx, edx
   call integer.new
   mov rdx, rdi
   inc rdi
   call integer.set
-  mov edx, eax
-  mov eax, esi
+  movid d, a
+  movid a, si
   call table.newindex
-  mov eax, edx
+  movid a, d
   call objects.unref
   pop rcx
   ret

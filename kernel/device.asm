@@ -14,16 +14,16 @@
 device:
 .init:
   call table.new
-  mov [.table], eax
+  stid [.table], a
   xor rdx, rdx
   call ide.init
   mov [.num.of.device], rdx
   call table.begin
-  mov esi, eax
+  movid si, a
   xor rdi, rdi
   mov di, [0x0800]
 .init.1:
-  mov eax, esi
+  movid a, si
   call table.iterator.isend
   jnc .init.3
   call table.iterator.deref
@@ -32,48 +32,40 @@ device:
   cmp edi, 2
   je .init.cd
 .init.2:
-  mov eax, esi
+  movid a, si
   call table.iterator.succ
   jmp .init.1
 .init.3:
-  mov eax, esi
+  movid a, si
   call objects.unref
   ret
 .init.hdd:
   ; find flag == 0 && type == ATA
-  mov ebp, edx
-  xor rax, rax
-  mov eax, edx
-  shl rax, 4
+  movid bp, d
+  addr_from_id a, d
   cmp byte [rax + object.padding], 0
   jne .init.2
-  xor rcx, rcx
-  mov ecx, [rax + object.content + 4]
-  shl rcx, 4
+  ldaddr c, [rax + object.content + word.size]
   cmp byte [rcx + object.internal.padding], .ata
   jne .init.2
-  mov [.boot], ebp
+  stid [.boot], bp
   jmp .init.3
 .init.cd:
   ; find flag == 0 && type == ATAPI
-  mov ebp, edx
-  xor rax, rax
-  mov eax, edx
-  shl rax, 4
+  movid bp, d
+  addr_from_id a, d
   cmp byte [rax + object.padding], 0
   jne .init.2
-  xor rcx, rcx
-  mov ecx, [rax + object.content + 4]
-  shl rcx, 4
+  ldaddr c, [rax + object.content + word.size]
   cmp byte [rcx + object.internal.padding], .atapi
   jne .init.2
   ; is it a Disk Device?
   mov eax, [rcx + object.internal.content]
-  mov edx, [rcx + object.internal.content + 4]
+  mov edx, [rcx + object.internal.content + word.size]
   call ide.isdiskdevice
   jc .init.2
   ; is a El-Torito Bootable Disk?
-  mov eax, ebp
+  movid a, bp
   mov edx, 0x11 * 2048
   call .index
   test rax, rax
@@ -91,7 +83,7 @@ device:
   jnz .init.cd.1
   mov edx, [rax + 0x47]  ; LBA of the boot catalog
   shl edx, 11  ; 1 LBA = 2048 bytes
-  mov eax, ebp
+  movid a, bp
   call .index
   test rax, rax
   jz .init.2
@@ -101,43 +93,42 @@ device:
   jne .init.2
   cmp byte [rax + 0x20], 0x88
   jne .init.2
-  mov [.boot], ebp
+  stid [.boot], bp
   jmp .init.3
 
 .new:
   push rcx
   push rdx
   call objects.new.chunk
-  mov rcx, rax
-  shr rcx, 4
+  id_from_addr a
+  movid c, a
   call objects.new.chunk
   mov rdx, rax
   call octet_buffer.new
-  mov [rdx + object.internal.content], eax
-  shr rdx, 4
+  stid [rdx + object.internal.content], a
+  id_from_addr d
   call objects.new.raw
   mov byte [rax + object.class], object.device
-  mov [rax + object.content], edx
-  mov [rax + object.content + 4], ecx
-  shr rax, 4
+  stid [rax + object.content], d
+  stid [rax + object.content + word.size], c
+  id_from_addr a
   pop rdx
   pop rcx
   ret
 
 .dispose.raw:
   push rax
+  push rcx
   push rdx
-  xor rdx, rdx
-  mov edx, [rax + object.content]
-  shl rdx, 4
-  mov eax, [rdx + object.internal.content]
+  mov rcx, rax
+  ldaddr d, [rax + object.content]
+  ldid a, [rdx + object.internal.content]
   call objects.unref
-  xor rdx, rdx
-  mov edx, [rax + object.content + 4]
-  shl rdx, 4
+  ldaddr d, [rcx + object.content + word.size]
   mov rax, rdx
   call objects.dispose.raw
   pop rdx
+  pop rcx
   pop rax
   ret
 
@@ -151,13 +142,9 @@ device:
   push rsi
   push rdi
   push rbp
-  xor rcx, rcx
-  mov ecx, eax
-  shl rcx, 4
-  xor rsi, rsi
-  mov esi, [rcx + object.content]
-  shl rsi, 4
-  mov eax, [rsi + object.internal.content]
+  addr_from_id c, a
+  ldaddr si, [rcx + object.content]
+  ldid a, [rsi + object.internal.content]
   call octet_buffer.index
   test rax, rax
   jnz .index.end
@@ -166,9 +153,7 @@ device:
   je .index.pmio
   jmp .index.failed
 .index.pmio:
-  xor rbp, rbp
-  mov ebp, [rcx + object.content + 4]
-  shl rbp, 4
+  ldaddr bp, [rcx + object.content + word.size]
   cmp byte [rbp + object.internal.padding], .ata
   je .index.pmio.ata
   cmp byte [rbp + object.internal.padding], .atapi
@@ -178,13 +163,13 @@ device:
   ; TODO: implement
   jmp .index.failed
 .index.pmio.atapi:
-  mov eax, [rsi + object.internal.content]
+  ldid a, [rsi + object.internal.content]
   and rdx, ~0x0fff
   call octet_buffer.newindex
   mov rbx, rdx
   shr rbx, 11
   mov ecx, [rbp + object.internal.content]
-  mov edx, [rbp + object.internal.content + 4]
+  mov edx, [rbp + object.internal.content + word.size]
   call ide.read.atapi
   test rax, rax
   jz .index.failed
@@ -242,12 +227,12 @@ device:
   jnz .index.cp.3
   jmp .index.cp.end
 .index.cp.4:
-  mov esi, eax
+  movid si, a
   call .index
   test rax, rax
   jz .index.cp.failed
   mov rbx, rax
-  mov eax, esi
+  movid a, si
   add rdx, rcx
   dec rdx
   call .index
@@ -308,9 +293,9 @@ device:
   pop rax
   jmp return.true
 
-.table: dd 0
+.table: did 0
 .num.of.device: dq 0
-.boot: dd 0
+.boot: did 0
 
 .pmio equ 0
 
