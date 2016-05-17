@@ -121,6 +121,7 @@ memory:
 
   ; out: a = page address
 .newpage:
+  pushs d, si, di
   xor rax, rax
   mov edi, [fs:TLS.memory.tablelookahead]
   mov esi, edi
@@ -143,6 +144,7 @@ memory:
   shl edi, 3  ; make least 5 bits are cleard
   add eax, edi  ; calc the id,
   shl rax, 12  ; and calc the address
+  pops d, si, di
   ret
 .newpage.3:
   add edi, 4
@@ -156,18 +158,9 @@ memory:
   mov edi, 0x00100020
   jmp .newpage.2
 
-.newpage@s:
-  push rdx
-  push rsi
-  push rdi
-  call .newpage
-  pop rdi
-  pop rsi
-  pop rdx
-  ret
-
   ; in: a = page address
 .disposepage:
+  pushs c, d, di
   shr rax, 12
   mov edi, eax
   mov ecx, eax
@@ -184,23 +177,12 @@ memory:
   and ecx, edx
   lock cmpxchg [edi], ecx
   jne .disposepage.1
-  ret
-
-.disposepage@s:
-  push rcx
-  push rdx
-  push rdi
-  call .disposepage
-  pop rdi
-  pop rdx
-  pop rcx
+  pops c, d, di
   ret
 
   ; in: a = page address
 .zerofill:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   xor edx, edx
   mov ecx, 4096 / 4
 .zerofill.1:
@@ -208,9 +190,7 @@ memory:
   add rax, 4
   dec ecx
   jnz .zerofill.1
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   ret
 
 .size: dq 0

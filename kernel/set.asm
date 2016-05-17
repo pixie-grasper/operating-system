@@ -14,16 +14,15 @@ set:
   ret
 
 .dispose.raw:
-  push rax
+  pushs a
   id_from_addr a
   call .clear
-  pop rax
+  pops a
   ret
 
   ; in: a = set id
 .clear:
-  push rax
-  push rdx
+  pushs a, d
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   testaddr a
@@ -31,8 +30,7 @@ set:
   mov rdx, rax
   call .clear.2
 .clear.1:
-  pop rdx
-  pop rax
+  pops a, d
   ret
 .clear.2:
   ldid a, [rdx + object.internal.content]
@@ -57,16 +55,14 @@ set:
 
   ; in: a = set id
 .clear.move:
-  push rax
-  push rdx
+  pushs a, d
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   testaddr a
   jz .clear.move.1
   call .clear.move.2
 .clear.move.1:
-  pop rdx
-  pop rax
+  pops a, d
   ret
 .clear.move.2:
   mov rdx, rax
@@ -93,9 +89,7 @@ set:
   ; in: d = value id
   ; out: a = false if not found, true if found
 .find:
-  push rdx
-  push rsi
-  push rdi
+  pushs d, si, di
   addr_from_id si, a
   clear_before_ld a
   ldaddr a, [rsi + object.content]
@@ -133,20 +127,13 @@ set:
 .find.4:
   ldnil a
 .find.5:
-  pop rdi
-  pop rsi
-  pop rdx
+  pops d, si, di
   ret
 
   ; in: a = set id
   ; in: d = value id
 .insert:
-  push rax
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs a, c, d, si, di, bp
   addr_from_id c, a
   ldaddr si, [rcx + object.content]
   testaddr si
@@ -157,13 +144,7 @@ set:
   stid [rcx + object.content], a
   movid a, d
   call objects.ref
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
-  ret
+  jmp .insert.6
 .insert.1:
   call stack.new
   movid bp, a
@@ -232,23 +213,14 @@ set:
   movid a, bp
   call stack.clear.move
   call objects.unref
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
+.insert.6:
+  pops a, c, d, si, di, bp
   ret
 
   ; in: a = set id
   ; in: d = value id
 .insert.move:
-  push rax
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs a, c, d, si, di, bp
   addr_from_id c, a
   ldaddr si, [rcx + object.content]
   testaddr si
@@ -257,13 +229,7 @@ set:
   stid [rax + object.internal.content], d
   id_from_addr a
   stid [rcx + object.content], a
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
-  ret
+  jmp .insert.move.6
 .insert.move.1:
   call stack.new
   movid bp, a
@@ -330,23 +296,15 @@ set:
   movid a, bp
   call stack.clear.move
   call objects.unref
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
+.insert.move.6:
+  pops a, c, d, si, di, bp
   ret
 
   ; in: a: root node id
   ; in: d: stack id indicates path
   ; out: a: root node id
 .insert.balance:
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs b, c, d, si, di
   ; b: address of the pnode
   ; c: stack id
   ; si: address of the new-node
@@ -469,23 +427,13 @@ set:
   movid di, si
 .insert.balance.8:
   movid a, di
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
+  pops b, c, d, si, di
   ret
 
   ; in: a = set id
   ; in: d = value id
 .remove:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs a, b, c, d, si, di, bp
   addr_from_id c, a
   ; if root-node == nil: do nothing
   ldaddr si, [rcx + object.content]
@@ -636,25 +584,13 @@ set:
   call stack.clear.move
   call objects.unref
 .remove.12:
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di, bp
   ret
 
   ; in: a = set id
   ; in: d = value id
 .remove.move:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs a, b, c, d, si, di, bp
   addr_from_id c, a
   ; if root-node == nil: do nothing
   ldaddr si, [rcx + object.content]
@@ -803,23 +739,14 @@ set:
   call stack.clear.move
   call objects.unref
 .remove.move.12:
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di, bp
   ret
 
   ; in: a: root node id
   ; in: d: stack id indicates path
   ; out: a: root node id
 .remove.balance:
-  push rbx
-  push rcx
-  push rsi
-  push rdi
+  pushs b, c, si, di
   ; b: address of the pnode
   ; c: stack id
   ; si: address of the new-node
@@ -952,16 +879,12 @@ set:
   je .remove.balance.1
 .remove.balance.10:
   movid a, di
-  pop rdi
-  pop rsi
-  pop rcx
-  pop rbx
+  pops b, c, si, di
   ret
 
   ; in/out: a = address of the node
 .rotate.right:
-  push rcx
-  push rdx
+  pushs c, d
   ; lnode <- node.left
   ldaddr d, [rax + object.internal.content + word.size]
   ; node.left <- lnode.right
@@ -972,14 +895,12 @@ set:
   stid [rdx + object.internal.content + word.size * 2], a
   ; return lnode
   mov rax, rdx
-  pop rdx
-  pop rcx
+  pops c, d
   ret
 
   ; in/out: a = address of the node
 .rotate.left:
-  push rcx
-  push rdx
+  pushs c, d
   ; rnode <- node.right
   ldaddr d, [rax + object.internal.content + word.size * 2]
   ; node.right <- rnode.left
@@ -990,13 +911,12 @@ set:
   stid [rdx + object.internal.content + word.size], a
   ; return rnode
   mov rax, rdx
-  pop rdx
-  pop rcx
+  pops c, d
   ret
 
   ; in: a = address of the node
 .balance.update:
-  push rdx
+  pushs d
   cmp byte [rax + object.internal.padding], 1
   jne .balance.update.1
   ldaddr d, [rax + object.internal.content + word.size * 2]
@@ -1019,7 +939,7 @@ set:
   mov byte [rdx + object.internal.padding], 0
 .balance.update.3:
   mov byte [rax + object.internal.padding], 0
-  pop rdx
+  pops d
   ret
 
 %endif  ; SET_ASM_

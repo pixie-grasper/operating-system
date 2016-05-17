@@ -97,8 +97,7 @@ device:
   jmp .init.3
 
 .new:
-  push rcx
-  push rdx
+  pushs c, d
   call objects.new.chunk
   id_from_addr a
   movid c, a
@@ -112,14 +111,11 @@ device:
   stid [rax + object.content], d
   stid [rax + object.content + word.size], c
   id_from_addr a
-  pop rdx
-  pop rcx
+  pops c, d
   ret
 
 .dispose.raw:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   mov rcx, rax
   ldaddr d, [rax + object.content]
   ldid a, [rdx + object.internal.content]
@@ -127,21 +123,14 @@ device:
   ldaddr d, [rcx + object.content + word.size]
   mov rax, rdx
   call objects.dispose.raw
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   ret
 
   ; in: a = device id
   ; in: d = address on the drive (byte-wised)
   ; out: a = address to the loaded buffer | nil
 .index:
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs b, c, d, si, di, bp
   addr_from_id c, a
   ldaddr si, [rcx + object.content]
   ldid a, [rsi + object.internal.content]
@@ -179,12 +168,7 @@ device:
 .index.failed:
   xor rax, rax
 .index.end:
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
+  pops b, c, d, si, di, bp
   ret
 
   ; in: a = device id
@@ -192,12 +176,7 @@ device:
   ; in: d = address on the drive (byte-wised)
   ; in: di = address to copy
 .index.cp:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs a, b, c, d, si, di
   mov rsi, rdx
   and rsi, 0x0fff
   add rsi, rcx
@@ -277,20 +256,10 @@ device:
   jnz .index.cp.9
   jmp .index.cp.end
 .index.cp.failed:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di
   jmp return.false
 .index.cp.end:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di
   jmp return.true
 
 .table: did 0

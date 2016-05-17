@@ -73,8 +73,8 @@ objects:
 
 %ifdef OBJECT_32_BYTES
 .newheap:
-  push rcx
-  call memory.newpage@s
+  pushs c
+  call memory.newpage
   call memory.zerofill
   mov byte [rax], 1  ; reserves 32 byte / 4096 byte
   mov rcx, rax
@@ -86,12 +86,12 @@ objects:
   call memory.disposepage@s
   mov rax, [fs:TLS.objects.heap]
 .newheap.1:
-  pop rcx
+  pops c
   ret
 %else  ; OBJECT_32_BYTES
 .newheap:
-  push rcx
-  call memory.newpage@s
+  pushs c
+  call memory.newpage
   call memory.zerofill
   mov byte [rax], 7  ; reserves 48 byte / 4096 byte
   mov byte [rax + 32 + object.class], object.system
@@ -102,20 +102,17 @@ objects:
   lock cmpxchg [fs:TLS.objects.heap], rcx
   mov rax, rcx
   je .newheap.1
-  call memory.disposepage@s
+  call memory.disposepage
   mov rax, [fs:TLS.objects.heap]
 .newheap.1:
-  pop rcx
+  pops c
   ret
 %endif
 
   ; out: a = chunk address
   ; assume run on single-process per thread.
 .new.chunk:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
 .new.chunk.1:
   mov rsi, [fs:TLS.objects.heap]
   mov rdi, rsi
@@ -147,10 +144,7 @@ objects:
   mov [rax + 16], rcx
   mov [rax + 24], rcx
 %endif  ; OBJECT_32_BYTES
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 .new.chunk.3:
 %ifdef OBJECT_32_BYTES
@@ -185,9 +179,7 @@ objects:
 .ref:
   call .isbool
   jnc .ref.2
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   addr_from_id d, a
   mov eax, [rdx + object.refcount]
 .ref.1:
@@ -195,9 +187,7 @@ objects:
   inc ecx
   lock cmpxchg [rdx + object.refcount], ecx
   jne .ref.1
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
 .ref.2:
   ret
 
@@ -205,9 +195,7 @@ objects:
 .unref:
   call .isbool
   jnc .unref.4
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   addr_from_id d, a
 .unref.1:
   mov eax, [rdx + object.refcount]
@@ -244,9 +232,7 @@ objects:
 .unref.2:
   call .dispose.raw
 .unref.3:
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
 .unref.4:
   ret
 .unref.integer:
@@ -285,9 +271,7 @@ objects:
 
   ; in: a = object address
 .dispose.raw:
-  push rcx
-  push rdx
-  push rdi
+  pushs c, d, di
   mov rdi, rax
   mov rcx, rax
   and rdi, ~0x0fff
@@ -313,9 +297,7 @@ objects:
   and edx, ecx
   lock cmpxchg [rdi], edx
   jne .dispose.raw.1
-  pop rdi
-  pop rdx
-  pop rcx
+  pops c, d, di
   ret
 
   ; compare a < d, return it.
@@ -346,15 +328,9 @@ objects:
   ret
 
 .lt:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
   call .lt@us
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 
 .new.nil:
@@ -366,7 +342,7 @@ objects:
   ret
 
 .new.true:
-  mov rax, 1
+  ldt a
   ret
 
   ; in: a = object id

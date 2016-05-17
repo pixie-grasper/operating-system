@@ -90,7 +90,7 @@ interrupts:
 
 .handler_20:  ; timer
   pushfq
-  push rax
+  pushs a
   mov ax, ds
   push rax
   mov ax, 1 * 8
@@ -100,7 +100,7 @@ interrupts:
   inc qword [.timer.count]
   pop rax
   mov ds, ax
-  pop rax
+  pops a
   popfq
   iretq
 
@@ -124,11 +124,11 @@ interrupts:
 .handler_2E:
 .handler_2F:
   pushfq
-  push rax
+  pushs a
   mov al, 0x20
   out 0x20, al
   out 0xa0, al
-  pop rax
+  pops a
   popfq
   iretq
 

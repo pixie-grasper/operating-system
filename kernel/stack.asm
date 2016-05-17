@@ -17,10 +17,10 @@ stack:
 
   ; in: a = stack address
 .dispose.raw:
-  push rax
+  pushs a
   id_from_addr a
   call .clear
-  pop rax
+  pops a
   ret
 
 .iterator.dispose.raw:
@@ -30,10 +30,10 @@ stack:
   ; in: a = stack id
   ; out: a = true if the stack is empty
 .empty:
-  push rdx
+  pushs d
   addr_from_id d, a
   ldid a, [rdx + object.content]
-  pop rdx
+  pops d
   call objects.isfalse
   jnc .empty.1
   ldnil a
@@ -46,7 +46,7 @@ stack:
   ; in: a = stack id
   ; out: a = top object id of the stack
 .top:
-  push rdx
+  pushs d
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   test byte [rax + object.internal.padding], 0x01
@@ -56,7 +56,7 @@ stack:
 .top.1:
   ldid a, [rax + object.internal.content + word.size]
 .top.2:
-  pop rdx
+  pops d
   ret
 
   ; @const
@@ -64,8 +64,7 @@ stack:
   ; in: d = n: integer; top = 0
   ; out: a = n-th object id of the stack
 .nth:
-  push rcx
-  push rdx
+  pushs c, d
   addr_from_id c, a
   ldaddr a, [rcx + object.content]
 .nth.1:
@@ -97,16 +96,14 @@ stack:
   ldaddr c, [rax + object.internal.content + word.size * 2]
   ldid a, [rcx + object.internal.content + word.size]
 .nth.7:
-  pop rdx
-  pop rcx
+  pops c, d
   ret
 
   ; @const
   ; in: a = stack id
   ; out: a = stack.iterator id
 .begin:
-  push rcx
-  push rdx
+  pushs c, d
   addr_from_id d, a
   call objects.new.raw
   mov byte [rax + object.class], object.stack.iterator
@@ -115,73 +112,65 @@ stack:
   mov dl, [rcx + object.internal.padding]
   mov [rax + object.padding], dl
   id_from_addr a
-  pop rdx
-  pop rcx
+  pops c, d
   ret
 
   ; in: a = stack.iterator id
   ; out: a = object id
 .iterator.deref:
-  push rcx
-  push rdx
+  pushs c, d
   ldnil c
   addr_from_id d, a
   mov rax, [rdx + object.content]
   mov cl, [rdx + object.padding]
   ldid a, [rax + object.internal.content + rcx * word.size]
-  pop rdx
-  pop rcx
+  pops c, d
   ret
 
   ; in/out: a = stack.iterator id
 .iterator.succ:
-  push rdx
+  pushs d
   addr_from_id d, a
   test byte [rdx + object.padding], 0x01
   jz .iterator.succ.1
   mov byte [rdx + object.padding], 0x00
   jmp .iterator.succ.2
 .iterator.succ.1:
-  push rax
-  push rcx
+  pushs a, c
   mov rax, [rdx + object.content]
   mov cl, [rax + object.internal.padding]
   mov [rdx + object.padding], cl
   ldaddr c, [rax + object.internal.content + word.size * 2]
   mov [rdx + object.content], rcx
-  pop rcx
-  pop rax
+  pops a, c
 .iterator.succ.2:
-  pop rdx
+  pops d
   ret
 
   ; in: a = stack.iterator id
 .iterator.isend:
-  push rdx
+  pushs d
   addr_from_id d, a
   mov rdx, [rdx + object.content]
   test rdx, rdx
-  pop rdx
+  pops d
   jz return.true
   jmp return.false
 
   ; in: a = stack id
   ; in: d = object id that will be pushed
 .push:
-  push rax
+  pushs a
   call .push.move
   movid a, d
   call objects.ref
-  pop rax
+  pops a
   ret
 
   ; in: a = stack id
   ; in: d = object id that will be pushed
 .push.move:
-  push rax
-  ; rdx not changed
-  push rsi
-  push rdi
+  pushs a, si, di
   addr_from_id di, a
   ldaddr si, [rdi + object.content]
   jnz .push.move.1
@@ -206,16 +195,12 @@ stack:
   id_from_addr a
   stid [rdi + object.content], a
 .push.move.3:
-  pop rdi
-  pop rsi
-  pop rax
+  pops a, si, di
   ret
 
   ; in: a = stack id
 .pop:
-  push rax
-  push rdx
-  push rsi
+  pushs a, d, si
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   test byte [rax + object.internal.padding], 0x01
@@ -233,16 +218,13 @@ stack:
   ldid a, [rax + object.internal.content + word.size]
   call objects.unref
 .pop.2:
-  pop rsi
-  pop rdx
-  pop rax
+  pops a, d, si
   ret
 
   ; in: a = stack id
   ; out: a = object id that was popped
 .pop.move:
-  push rdx
-  push rsi
+  pushs d, si
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   test byte [rax + object.internal.padding], 0x01
@@ -257,15 +239,12 @@ stack:
   mov byte [rax + object.internal.padding], 0x00
   ldid a, [rax + object.internal.content + word.size]
 .pop.move.2:
-  pop rsi
-  pop rdx
+  pops d, si
   ret
 
   ; in: a = stack id
 .clear:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   testaddr a
@@ -289,15 +268,12 @@ stack:
   pop rax
   stid [rax + object.content], d
 .clear.raw.3:
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   ret
 
   ; in: a = stack id
 .clear.move:
-  push rax
-  push rdx
+  pushs a, d
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   testaddr a
@@ -312,8 +288,7 @@ stack:
   pop rdx
   stid [rdx + object.content], a
 .clear.move.2:
-  pop rdx
-  pop rax
+  pops a, d
   ret
 
 %endif  ; STACK_ASM_

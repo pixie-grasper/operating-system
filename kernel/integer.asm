@@ -12,11 +12,11 @@ integer:
   ; in: a = int:64
   ; out: a = integer id
 .new.with.value:
-  push rdx
+  pushs d
   mov rdx, rax
   call .new
   call .set
-  pop rdx
+  pops d
   ret
 
 .dispose.raw:
@@ -25,19 +25,19 @@ integer:
   ; in: a = integer id
   ; out: a = int:64
 .get:
-  push rdx
+  pushs d
   addr_from_id d, a
   mov rax, [rdx + object.content]
-  pop rdx
+  pops d
   ret
 
   ; in: a = integer id
   ; in: d = int:64
 .set:
-  push rcx
+  pushs c
   addr_from_id c, a
   mov [rcx + object.content], rdx
-  pop rcx
+  pops c
   ret
 
   ; in: a = integer id 1

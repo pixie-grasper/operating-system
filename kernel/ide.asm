@@ -5,12 +5,7 @@ ide:
   ; in: a = table id
   ; in/out: d = int:64 next entry number
 .init:
-  push rax
-  push rbx
-  push rcx
-  push rsi
-  push rdi
-  push rbp
+  pushs a, b, c, si, di, bp
   mov esi, eax
   mov rdi, rdx
   ; first, detect device
@@ -26,12 +21,7 @@ ide:
   out dx, al
   call interrupts.enable.ata
   mov rdx, rdi
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, si, di, bp
   ret
 
   ; in: c = port number
@@ -123,12 +113,7 @@ ide:
   ; in: a = port number
   ; in: d = device number
 .isdiskdevice:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs a, b, c, d, si, di
   mov ecx, eax
   mov ebx, edx
   shl ebx, 4
@@ -171,40 +156,26 @@ ide:
   mov ecx, edx
   call .hlt.bsy.ndrq
   jc .isdiskdevice.failed
-  call memory.newpage@s
+  call memory.newpage
   mov rdi, rax
   mov edx, ecx
   mov ecx, 96 / 2
   rep insw
   mov ebx, [rax]
   and ebx, 0x1f
-  call memory.disposepage@s
+  call memory.disposepage
   cmp ebx, 5
   jne .isdiskdevice.failed
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di
   jmp return.true
 .isdiskdevice.failed:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di
   jmp return.false
 
   ; in: a = port number
   ; in: d = device number
 .cd.lock:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
+  pushs a, b, c, d, si
   mov ecx, eax
   mov ebx, edx
   shl ebx, 4
@@ -244,21 +215,13 @@ ide:
   rep outsw
   add rsp, 16
 .cd.lock.end:
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si
   ret
 
   ; in: a = port number
   ; in: d = device number
 .cd.unlock:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
+  pushs a, b, c, d, si
   mov ecx, eax
   mov ebx, edx
   shl ebx, 4
@@ -297,11 +260,7 @@ ide:
   rep outsw
   add rsp, 16
 .cd.unlock.end:
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si
   ret
 
   ; in: a = address of the buffer
@@ -310,11 +269,7 @@ ide:
   ; in: d = device number
   ; out: a = address of the buffer or nil
 .read.atapi:
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs b, c, d, si, di
   mov rdi, rax
   mov esi, edx
   shl esi, 4
@@ -365,13 +320,9 @@ ide:
   rep insw
   jmp .read.atapi.end
 .read.atapi.failed:
-  xor rax, rax
+  ldnil a
 .read.atapi.end:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
+  pops b, c, d, si, di
   ret
 
 .wait.bsy.drq:

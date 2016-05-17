@@ -9,9 +9,7 @@
 
 iso9660:
 .iterator.dispose.raw:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   mov rcx, rax
   ldaddr d, [rax + object.content]
   ldid a, [rdx + object.internal.content + word.size]
@@ -20,29 +18,23 @@ iso9660:
   call objects.dispose.raw
   ldaddr a, [rcx + object.content + word.size]
   call objects.dispose.raw
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   ret
 
 .file.status.dispose.raw:
-  push rax
-  push rdx
+  pushs a, d
   ldaddr d, [rax + object.content + word.size]
   ldid a, [rax + object.content]
   call objects.unref
   mov rax, rdx
   call objects.dispose.raw
-  pop rdx
-  pop rax
+  pops a, d
   ret
 
   ; in: a = device
   ; out: a = iterator id of the root | nil
 .begin:
-  push rcx
-  push rdx
-  push rsi
+  pushs c, d, si
   movid si, a
   mov edx, 2048 * 16
 .begin.1:
@@ -76,18 +68,12 @@ iso9660:
   stid [rax + object.content + word.size], c
   id_from_addr a
 .begin.3:
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si
   ret
 
   ; in: a = iterator id
 .iterator.succ:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
+  pushs a, b, c, d, si
   addr_from_id si, a
   ldaddr c, [rsi + object.content + word.size]
   xor rbx, rbx
@@ -112,20 +98,12 @@ iso9660:
   ldnil a
   stid [rdx + object.internal.content + word.size], a
 .iterator.succ.1:
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si
   ret
 
   ; in: a = iterator id
 .iterator.isrefsfile:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
+  pushs a, b, c, d, si
   addr_from_id si, a
   ldaddr c, [rsi + object.content]
   ldid a, [rcx + object.internal.content]
@@ -140,23 +118,14 @@ iso9660:
   call device.index
   mov dl, [rax]
   test dl, 0x02
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si
   jz return.true
   jmp return.false
 
   ; in: a = iterator id
   ; out: a = octet-buffer id indicates a name of the refed object
 .iterator.getname:
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs b, c, d, si, di, bp
   addr_from_id si, a
   ldaddr bp, [rsi + object.content]
   ldid a, [rbp + object.internal.content]
@@ -204,21 +173,13 @@ iso9660:
   sub rdi, rbx
   mov [rdi + rdx], ecx
   movid a, si
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
+  pops b, c, d, si, di, bp
   ret
 
   ; in: a = iterator id refs directory
   ; out: a = refed iterator id | nil
 .iterator.deref.directory:
-  push rbx
-  push rcx
-  push rdx
-  push rsi
+  pushs b, c, d, si
   addr_from_id si, a
   ldaddr c, [rsi + object.content]
   ldid a, [rcx + object.internal.content + word.size]
@@ -263,19 +224,13 @@ iso9660:
 .iterator.deref.directory.end:
   add rsp, 32
 .iterator.deref.directory.end.2:
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
+  pops b, c, d, si
   ret
 
   ; in: a = iterator id refs file
   ; out: a = file id
 .iterator.deref.file:
-  push rbx
-  push rcx
-  push rdx
-  push rsi
+  pushs b, c, d, si
   addr_from_id si, a
   ldaddr c, [rsi + object.content]
   ldid a, [rcx + object.internal.content + word.size]
@@ -311,24 +266,17 @@ iso9660:
 .iterator.deref.file.end:
   add rsp, 32
 .iterator.deref.file.end.2:
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
+  pops b, c, d, si
   ret
 
   ; in: a = iterator id
 .iterator.isend:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   addr_from_id d, a
   ldaddr c, [rdx + object.content + word.size]
   mov eax, [rcx + object.internal.content + word.size]
   cmp eax, [rcx + object.internal.content + word.size * 2]
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   jae return.true
   jmp return.false
 

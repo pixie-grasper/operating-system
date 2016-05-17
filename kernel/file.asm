@@ -12,19 +12,17 @@ file:
   ret
 
 .new.raw:
-  push rdx
+  pushs d
   call octet_buffer.new
   movid d, a
   call objects.new.raw
   mov byte [rax + object.class], object.file
   stid [rax + object.content], d
-  pop rdx
+  pops d
   ret
 
 .dispose.raw:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   addr_from_id d, a
   ldid a, [rdx + object.content]
   call objects.unref
@@ -36,16 +34,13 @@ file:
   mov rax, rcx
   call objects.dispose.raw
 .dispose.raw.1:
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   ret
 
   ; in: a = file id
   ; in: d = info id
 .set.info:
-  push rax
-  push rcx
+  pushs a, c
   addr_from_id c, a
   ldaddr a, [rcx + object.content + word.size]
   testaddr a
@@ -54,18 +49,14 @@ file:
   call objects.unref
 .set.info.1:
   stid [rcx + object.content + word.size], d
-  pop rcx
-  pop rax
+  pops a, c
   ret
 
   ; in: a = file id
   ; in: d = offset
   ; out: a = nil | mapped address
 .index:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
   addr_from_id di, a
   ldid a, [rdi + object.content]
   call octet_buffer.index
@@ -83,10 +74,7 @@ file:
   ldid c, [rsi + object.internal.content]
   call [rsi + object.internal.content + word.size]
 .index.end:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 
 %endif  ; FILE_ASM_

@@ -17,34 +17,30 @@ table:
   ret
 
 .dispose.raw:
-  push rax
+  pushs a
   id_from_addr a
   call .clear
-  pop rax
+  pops a
   ret
 
 .iterator.dispose.raw:
-  push rax
+  pushs a
   ldid a, [rax + object.content + word.size]
   call stack.clear.move
   call objects.unref
-  pop rax
+  pops a
   ret
 
   ; in: a = table id
 .clear:
-  push rax
-  push rcx
-  push rdx
+  pushs a, c, d
   addr_from_id d, a
   ldaddr a, [rdx + object.content]
   jz .clear.1
   mov rdx, rax
   call .clear.2
 .clear.1:
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d
   ret
 .clear.2:
   ldaddr c, [rdx + object.internal.content]
@@ -78,10 +74,7 @@ table:
   ; in: a = table id
   ; out: a = table.iterator id
 .begin:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
   addr_from_id d, a
   call objects.new.raw
   mov byte [rax + object.class], object.stack.iterator
@@ -116,33 +109,25 @@ table:
   stid [rsi + object.content], c
   id_from_addr si
   movid a, si
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 
   ; in: a = table.iterator id
   ; out: a = key id
   ; out: d = value id
 .iterator.deref:
-  push rcx
+  pushs c
   addr_from_id c, a
   ldaddr d, [rcx + object.content]
   ldaddr c, [rdx + object.internal.content]
   ldid a, [rcx + object.internal.content]
   ldid d, [rcx + object.internal.content + word.size]
-  pop rcx
+  pops c
   ret
 
   ; in: a = table.iterator id
 .iterator.succ:
-  push rax
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
+  pushs a, c, d, si, di, bp
   addr_from_id si, a
   ; if iterator ended: return it
   cmp byte [rsi + object.padding], 0
@@ -206,20 +191,15 @@ table:
   ; if old-node pointed the maximum-key: return ended iterator
   mov byte [rsi + object.padding], 1
 .iterator.succ.5:
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d, si, di, bp
   ret
 
   ; in: a = table.iterator id
 .iterator.isend:
-  push rdx
+  pushs d
   addr_from_id d, a
   cmp byte [rdx + object.padding], 0
-  pop rdx
+  pops d
   je return.false
   jmp return.true
 
@@ -228,10 +208,7 @@ table:
   ; in: d = key id
   ; out: a = value id or nil
 .index:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
   addr_from_id di, a
   ldaddr si, [rdi + object.content]
   jz .index.4
@@ -267,26 +244,16 @@ table:
   ldid a, [rcx + object.internal.content + word.size]
   jmp .index.5
 .index.4:
-  xor rax, rax
+  ldnil a
 .index.5:
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 
   ; in: a = table id
   ; in: d = key id
   ; in: c = value id or nil
 .newindex:
-  push rax
-  push rbx
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  push rbp
-  push r8
+  pushs a, b, c, d, si, di, bp, r8
   addr_from_id b, a
   movid di, d
   call stack.new
@@ -375,14 +342,7 @@ table:
   movid a, bp
   call stack.clear.move
   call objects.unref
-  pop r8
-  pop rbp
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rbx
-  pop rax
+  pops a, b, c, d, si, di, bp, r8
   ret
 
 .newindex.insert.1:
@@ -418,13 +378,10 @@ table:
   ldaddr si, [rax + object.internal.content]
   add edx, [rsi + object.internal.content + word.size * 2]
 .newindex.insert.2:
-  xor rax, rax
-  mov eax, [rcx + object.internal.content + word.size * 2]
-  shl rax, 4
+  ldaddr a, [rcx + object.internal.content + word.size * 2]
+  testaddr a
   jz .newindex.insert.3
-  xor rsi, rsi
-  mov esi, [rax + object.internal.content]
-  shl rsi, 4
+  ldaddr si, [rax + object.internal.content]
   add edx, [rsi + object.internal.content + word.size * 2]
 .newindex.insert.3:
   inc edx
@@ -835,10 +792,7 @@ table:
   ; in/out: a = address of the node
   ; note: node.left has to exist
 .rotate.right:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
   ; lnode <- node.left
   ldaddr d, [rax + object.internal.content + word.size]
   ; node.left <- lnode.right
@@ -863,18 +817,12 @@ table:
   mov [rsi + object.internal.content + word.size * 2], ecx
   ; return lnode
   mov rax, rdx
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 
   ; in/out: a = address of the node
 .rotate.left:
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs c, d, si, di
   ; rnode <- node.right
   ldaddr d, [rax + object.internal.content + word.size * 2]
   ; node.right <- rnode.left
@@ -898,15 +846,12 @@ table:
   mov [rsi + object.internal.content + word.size * 2], ecx
   ; return rnode
   mov rax, rdx
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
+  pops c, d, si, di
   ret
 
   ; in: a = address of the node
 .balance.update:
-  push rdx
+  pushs d
   cmp byte [rax + object.internal.padding], 1
   jne .balance.update.1
   ldaddr d, [rax + object.internal.content + word.size * 2]
@@ -929,7 +874,7 @@ table:
   mov byte [rdx + object.internal.padding], 0
 .balance.update.3:
   mov byte [rax + object.internal.padding], 0
-  pop rdx
+  pops d
   ret
 
 %endif  ; TABLE_ASM_

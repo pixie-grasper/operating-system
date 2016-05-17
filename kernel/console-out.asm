@@ -57,11 +57,7 @@ console_out:
 
   ; in: a = address of asciz string
 .prints:
-  push rax
-  push rcx
-  push rdx
-  push rsi
-  push rdi
+  pushs a, c, d, si, di
   mov rsi, rax
   mov rdi, .lock
   call atomic.lock
@@ -91,11 +87,7 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d, si, di
   ret
 .prints.scroll:
   call .scroll
@@ -125,10 +117,7 @@ console_out:
   jmp .prints.1
 
 .scroll:
-  push rax
-  push rcx
-  push rsi
-  push rdi
+  pushs a, c, si, di
   mov ecx, 80 * 24 * 2 / 4
   mov esi, 0x000b8000 + 80 * 2
   mov edi, 0x000b8000
@@ -146,18 +135,12 @@ console_out:
   add edi, 4
   dec ecx
   jnz .scroll.2
-  pop rdi
-  pop rsi
-  pop rcx
-  pop rax
+  pops a, c, si, di
   sub edi, 80 * 2
   ret
 
 .printdot@s:
-  push rax
-  push rcx
-  push rdx
-  push rdi
+  pushs a, c, d, di
   mov rdi, .lock
   call atomic.lock
   mov edi, [.current.pos]
@@ -171,17 +154,11 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
-  pop rdi
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d, di
   ret
 
 .printcolon@s:
-  push rax
-  push rcx
-  push rdx
-  push rdi
+  pushs a, c, d, di
   mov rdi, .lock
   call atomic.lock
   mov edi, [.current.pos]
@@ -195,14 +172,12 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
-  pop rdi
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d, di
   ret
 
   ; in: a = signed integer
 .printi:
+  pushs a, c, d, di
   xor rdx, rdx
   xor rcx, rcx
   push rcx  ; terminater
@@ -244,25 +219,15 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
+  pops a, c, d, di
   ret
 .printi.7:
   push 0x0730
   jmp .printi.4
 
-.printi@s:
-  push rax
-  push rcx
-  push rdx
-  push rdi
-  call .printi
-  pop rdi
-  pop rdx
-  pop rcx
-  pop rax
-  ret
-
   ; in: a = bit stream
 .printx:
+  pushs a, c, d, si, di
   bswap rax
   mov rdx, rax
   mov rcx, 0xf0f0f0f0f0f0f0f0
@@ -296,20 +261,7 @@ console_out:
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
-  ret
-
-.printx@s:
-  push rax
-  push rcx
-  push rdx
-  push rsi
-  push rdi
-  call .printx
-  pop rdi
-  pop rsi
-  pop rdx
-  pop rcx
-  pop rax
+  pops a, c, d, si, di
   ret
 
 .current.pos: dd 0x000b8000

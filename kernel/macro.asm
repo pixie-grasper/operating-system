@@ -151,4 +151,18 @@
   xor %1.64, %1.64
 %endmacro
 
+%macro pushs 1-*
+%rep %0
+  push %1.64
+%rotate 1
+%endrep
+%endmacro
+
+%macro pops 1-*
+%rep %0
+%rotate -1
+  push %1.64
+%endrep
+%endmacro
+
 %endif  ; MACRO_ASM_
