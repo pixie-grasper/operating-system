@@ -83,7 +83,7 @@ objects:
   lock cmpxchg [fs:TLS.objects.heap], rcx
   mov rax, rcx
   je .newheap.1
-  call memory.disposepage@s
+  call memory.disposepage
   mov rax, [fs:TLS.objects.heap]
 .newheap.1:
   pops c
