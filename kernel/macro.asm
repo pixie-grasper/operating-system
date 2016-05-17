@@ -161,7 +161,7 @@
 %macro pops 1-*
 %rep %0
 %rotate -1
-  push %1.64
+  pop %1.64
 %endrep
 %endmacro
 
