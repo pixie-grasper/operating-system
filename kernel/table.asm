@@ -50,12 +50,7 @@ table:
   call objects.unref
   mov rax, rcx
   call objects.dispose.raw
-%ifdef OBJECT_32_BYTES
-  ldaddr d, [rdx + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  mov rax, rdx
-  ldaddr d, [rax + object.internal.content + word.size]
-%endif  ; OBJECT_32_BYTES
+  ldaddr d, [rdx + object.internal.content + word.size], a
   jz .clear.3
   push rax
   call .clear.2
@@ -550,12 +545,7 @@ table:
   ldnil d
   call stack.push.move
   ; that <- that.left
-%ifdef OBJECT_32_BYTES
-  ldaddr di, [rdi + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rdi + object.internal.content + word.size]
-  addr_from_id di, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr di, [rdi + object.internal.content + word.size], a
   jmp .newindex.remove.2
 .newindex.remove.3:
   ; node.key, node.value <- that.key, that.value

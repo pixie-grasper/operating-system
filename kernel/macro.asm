@@ -35,9 +35,27 @@
 %define r14.64 r14
 %define r15.64 r15
 
+%define a.id 0
+%define b.id 1
+%define c.id 2
+%define d.id 3
+%define si.id 4
+%define di.id 5
+%define bp.id 6
+%define sp.id 7
+%define r8.id 8
+%define r9.id 9
+%define r10.id 10
+%define r11.id 11
+%define r12.id 12
+%define r13.id 13
+%define r14.id 14
+%define r15.id 15
+
 ; %define OBJECT_32_BYTES
 
 %ifdef OBJECT_32_BYTES
+%define DEFINED_OBJECT_32_BYTES 1
 
 %define word.size 8
 %define did dq
@@ -49,7 +67,7 @@
 %macro id_from_addr 1
 %endmacro
 
-%macro ldaddr 2
+%macro ldaddr 2-3
   mov %1.64, %2
 %endmacro
 
@@ -89,6 +107,7 @@
 %endmacro
 
 %else  ; OBJECT_32_BYTES
+%define DEFINED_OBJECT_32_BYTES 0
 
 %define word.size 4
 %define did dd
@@ -103,10 +122,17 @@
   shr %1.64, 4
 %endmacro
 
-%macro ldaddr 2
+%macro ldaddr 2-3
+%if %0 == 3
+  xor %3.64, %3.64
+  mov %3.32, %2
+  shl %3.64, 4
+  mov %1.64, %3.64
+%else
   xor %1.64, %1.64
   mov %1.32, %2
   shl %1.64, 4
+%endif
 %endmacro
 
 %macro testaddr 1

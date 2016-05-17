@@ -130,11 +130,7 @@ objects:
   dec edx
   xor rax, rax
   popcnt eax, edx
-%ifdef OBJECT_32_BYTES
-  shl eax, 5
-%else  ; OBJECT_32_BYTES
-  shl eax, 4
-%endif  ; OBJECT_32_BYTES
+  shl eax, 4 + DEFINED_OBJECT_32_BYTES
   add eax, ecx
   add rax, rdi
   xor rcx, rcx
@@ -147,11 +143,7 @@ objects:
   pops c, d, si, di
   ret
 .new.chunk.3:
-%ifdef OBJECT_32_BYTES
-  add ecx, 1024  ; = 32 * 32
-%else  ; OBJECT_32_BYTES
-  add ecx, 512  ; = 32 * 16
-%endif  ; OBJECT_32_BYTES
+  add ecx, 512 << DEFINED_OBJECT_32_BYTES
   add rsi, 4
   cmp ecx, 4096
   jne .new.chunk.2
@@ -275,17 +267,10 @@ objects:
   mov rdi, rax
   mov rcx, rax
   and rdi, ~0x0fff
-%ifdef OBJECT_32_BYTES
-  and rcx, 0x03e0
-  shr ecx, 5
-  and rax, 0x0c00
-  shr rax, 10 - 2
-%else  ; OBJECT_32_BYTES
-  and rcx, 0x01f0
-  shr ecx, 4
-  and rax, 0x0e00
-  shr rax, 9 - 2
-%endif  ; OBJECT_32_BYTES
+  and rcx, 0x01f0 << DEFINED_OBJECT_32_BYTES
+  shr ecx, 4 + DEFINED_OBJECT_32_BYTES
+  and rax, 0x0c00 | (1 << (9 + DEFINED_OBJECT_32_BYTES))
+  shr rax, 9 - 2 + DEFINED_OBJECT_32_BYTES
   add rdi, rax
   mov eax, 1
   shl eax, cl

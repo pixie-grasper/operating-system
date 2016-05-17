@@ -60,32 +60,20 @@ octet_buffer:
   test rcx, rcx
   jz .index.2
   mov rax, rdx
-%ifdef OBJECT_32_BYTES
-  shr rax, 9 + 9 + 9 + 12
-%else  ; OBJECT_32_BYTES
-  shr rax, 10 + 10 + 10 + 12
-%endif
+  shr rax, (10 - DEFINED_OBJECT_32_BYTES) * 3 + 12
   jnz .index.2  ; invalid index
   mov rax, rdx
-%ifdef OBJECT_32_BYTES
-  shr rax, 9 + 9 + 12
-%else  ; OBJECT_32_BYTES
-  shr rax, 10 + 10 + 12
-%endif
+  shr rax, (10 - DEFINED_OBJECT_32_BYTES) * 2 + 12
   ldaddr si, [rcx + rax * word.size]
   jz .index.2
   mov rax, rdx
-%ifdef OBJECT_32_BYTES
-  shr rax, 9 + 12
-%else  ; OBJECT_32_BYTES
-  shr rax, 10 + 12
-%endif  ; OBJECT_32_BYTES
-  and eax, 0x03ff
+  shr rax, (10 - DEFINED_OBJECT_32_BYTES) * 1 + 12
+  and eax, 0x03ff >> DEFINED_OBJECT_32_BYTES
   ldaddr c, [rsi + rax * word.size]
   jz .index.2
   mov rax, rdx
   shr rax, 12
-  and eax, 0x03ff
+  and eax, 0x03ff >> DEFINED_OBJECT_32_BYTES
   xor rsi, rsi
   mov esi, [rcx + rax * word.size]
   shl rsi, 4
@@ -115,18 +103,10 @@ octet_buffer:
 .newindex.1:
   mov rcx, rsi
   mov rdi, rdx
-%ifdef OBJECT_32_BYTES
-  shr rdi, 9 + 9 + 9 + 12
-%else  ; OBJECT_32_BYTES
-  shr rdi, 10 + 10 + 10 + 12
-%endif  ; OBJECT_32_BYTES
+  shr rdi, (10 - DEFINED_OBJECT_32_BYTES) * 3 + 12
   jnz .newindex.nil  ; invalid index
   mov rdi, rdx
-%ifdef OBJECT_32_BYTES
-  shr rdi, 9 + 9 + 12
-%else  ; OBJECT_32_BYTES
-  shr rdi, 10 + 10 + 12
-%endif  ; OBJECT_32_BYTES
+  shr rdi, (10 - DEFINED_OBJECT_32_BYTES) * 2 + 12
   ldaddr si, [rcx + rdi * word.size]
   testaddr si
   jnz .newindex.2
@@ -137,13 +117,8 @@ octet_buffer:
   stid [rcx + rdi * word.size], a
 .newindex.2:
   mov rdi, rdx
-%ifdef OBJECT_32_BYTES
-  shr rdi, 9 + 12
-  and rdi, 0x01ff
-%else  ; OBJECT_32_BYTES
-  shr rdi, 10 + 12
-  and rdi, 0x03ff
-%endif  ; OBJECT_32_BYTES
+  shr rdi, (10 - DEFINED_OBJECT_32_BYTES) * 1 + 12
+  and rdi, 0x03ff >> DEFINED_OBJECT_32_BYTES
   ldaddr c, [rsi + rdi * word.size]
   testaddr c
   jnz .newindex.3
@@ -155,11 +130,7 @@ octet_buffer:
 .newindex.3:
   mov rdi, rdx
   shr rdi, 12
-%ifdef OBJECT_32_BYTES
-  and rdi, 0x01ff
-%else  ; OBJECT_32_BYTES
-  and rdi, 0x03ff
-%endif  ; OBJECT_32_BYTES
+  and rdi, 0x03ff >> DEFINED_OBJECT_32_BYTES
   ldaddr si, [rcx + rdi * word.size]
   testaddr si
   jnz .newindex.4

@@ -462,12 +462,7 @@ set:
   ldt d
   call stack.push.move
   ; node <- node.right
-%ifdef OBJECT_32_BYTES
-  ldaddr si, [rsi + object.internal.content + word.size * 2]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rsi + object.internal.content + word.size * 2]
-  addr_from_id si, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size * 2], a
   jmp .remove.3
 .remove.2:
   movid a, di
@@ -484,12 +479,7 @@ set:
   ldnil d
   call stack.push.move
   ; node <- node.left
-%ifdef OBJECT_32_BYTES
-  ldaddr si, [rsi + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rsi + object.internal.content + word.size]
-  addr_from_id si, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size], a
 .remove.3:
   ; wend
   ; test rsi, rsi ;  test not needed; the shl sets/clears flags.z
@@ -529,12 +519,7 @@ set:
   ldnil d
   call stack.push.move
   ; that <- that.left
-%ifdef OBJECT_32_BYTES
-  ldaddr b, [rbx + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rbx + object.internal.content + word.size]
-  addr_from_id b, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr b, [rbx + object.internal.content + word.size], a
   jmp .remove.5
 .remove.6:
   ; node.value <- that.value
@@ -619,12 +604,7 @@ set:
   ldt d
   call stack.push.move
   ; node <- node.right
-%ifdef OBJECT_32_BYTES
-  ldaddr si, [rsi + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rsi + object.internal.content + word.size]
-  addr_from_id si, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size], a
   jmp .remove.move.3
 .remove.move.2:
   movid a, di
@@ -641,12 +621,7 @@ set:
   ldnil d
   call stack.push.move
   ; node <- node.left
-%ifdef OBJECT_32_BYTES
-  ldaddr si, [rsi + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rsi + object.internal.content + word.size]
-  addr_from_id si, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr si, [rsi + object.internal.content + word.size], a
 .remove.move.3:
   ; wend
   ; test rsi, rsi ;  test not needed; the shl sets/clears flags.z
@@ -684,12 +659,7 @@ set:
   ldnil d
   call stack.push.move
   ; that <- that.left
-%ifdef OBJECT_32_BYTES
-  ldaddr b, [rbx + object.internal.content + word.size]
-%else  ; OBJECT_32_BYTES
-  ldid a, [rbx + object.internal.content + word.size]
-  addr_from_id b, a
-%endif  ; OBJECT_32_BYTES
+  ldaddr b, [rbx + object.internal.content + word.size], a
   jmp .remove.move.5
 .remove.move.6:
   ; node.value <- that.value
