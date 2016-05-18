@@ -75,10 +75,6 @@
   test %1.64, %1.64
 %endmacro
 
-%macro staddr 2
-  mov %1, %2.64
-%endmacro
-
 %macro ldid 2
   mov %1.64, %2
 %endmacro
@@ -136,11 +132,6 @@
 %endmacro
 
 %macro testaddr 1
-%endmacro
-
-%macro staddr 2
-  shr %2.64, 4
-  mov %1, %2.32
 %endmacro
 
 %macro ldid 2
