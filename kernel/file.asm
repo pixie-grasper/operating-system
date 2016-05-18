@@ -63,6 +63,7 @@ file:
   test rax, rax
   jnz .index.end
   ldaddr si, [rdi + object.content + word.size]
+  testaddr si
   jz .index.end
   mov rcx, rdx
   and rdx, ~0x0fff

@@ -5,6 +5,7 @@
 ;   iterator = {property, status}
 ;   property = {device, current deref | nil, reserved}
 ;   status = {LBA of the directory record, current pos, length of the record}
+;   file.info = {file.status, [address of the loader]:64}
 ;   file.status = {device, status}
 
 iso9660:
@@ -230,7 +231,7 @@ iso9660:
   ; in: a = iterator id refs file
   ; out: a = file id
 .iterator.deref.file:
-  pushs b, c, d, si
+  pushs b, c, d, si, di
   addr_from_id si, a
   ldaddr c, [rsi + object.content]
   ldid a, [rcx + object.internal.content + word.size]
@@ -243,7 +244,7 @@ iso9660:
   mov edx, [rbx + object.internal.content]
   shl rdx, 11
   xor rcx, rcx
-  mov ecx, [rbx + object.internal.content + 4]
+  mov ecx, [rbx + object.internal.content + word.size]
   add rdx, rcx
   mov rcx, 28
   sub rsp, 32
@@ -254,8 +255,23 @@ iso9660:
   test byte [rdi + 25], 0x02  ; file?
   jnz .iterator.deref.file.failed
   call objects.new.chunk
-  stid [rax + object.internal.content], si
-  mov qword [rax + object.internal.content + 4], .file.index
+  mov ecx, [rbx + object.internal.content]
+  mov [rax + object.internal.content], ecx
+  mov ecx, [rbx + object.internal.content + word.size]
+  mov [rax + object.internal.content + word.size], ecx
+  mov ecx, [rbx + object.internal.content + word.size * 2]
+  mov [rax + object.internal.content + word.size * 2], ecx
+  id_from_addr a
+  movid c, a
+  call objects.new.raw
+  mov byte [rax + object.content], object.iso9660.file.status
+  stid [rax + object.content], si
+  stid [rax + object.content + word.size], c
+  id_from_addr a
+  movid c, a
+  call objects.new.chunk
+  stid [rax + object.internal.content], c
+  mov qword [rax + object.internal.content + word.size], .file.index
   id_from_addr a
   movid d, a
   call file.new
@@ -266,7 +282,7 @@ iso9660:
 .iterator.deref.file.end:
   add rsp, 32
 .iterator.deref.file.end.2:
-  pops b, c, d, si
+  pops b, c, d, si, di
   ret
 
   ; in: a = iterator id
