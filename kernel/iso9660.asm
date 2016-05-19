@@ -299,8 +299,37 @@ iso9660:
   ; in: a = page address
   ; in: c = file.status id
   ; in: d = file offset
-  ; TODO: implement
+  ; out: a = mapped address
 .file.index:
+  pushs b, c, d, si, di, bp
+  mov rsi, rax
+  addr_from_id b, c
+  mov rbp, rdx
+  ldaddr a, [rbx + object.content + word.size]
+  xor rdx, rdx
+  mov edx, [rax + object.internal.content]
+  shl rdx, 11
+  xor rcx, rcx
+  mov ecx, [rax + object.internal.content + word.size]
+  add rdx, rcx
+  mov rcx, 8
+  sub rsp, 8
+  mov rdi, rsp
+  ldid a, [rbx + object.content]
+  call device.index.cp
+  xor rdx, rdx
+  mov edx, [rdi + 2]
+  add rsp, 8
+  shl rdx, 11
+  add rdx, rbp
+  and rdx, ~0x0fff
+  and rbp, 0x0fff
+  mov rdi, rsi
+  mov rcx, 4096
+  call device.index.cp
+  mov rax, rdi
+  add rax, rbp
+  pops b, c, d, si, di, bp
   ret
 
 %endif  ; ISO9660_ASM_
