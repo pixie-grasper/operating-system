@@ -1,6 +1,8 @@
   section .text vstart=0x00042000
   bits 64
 
+%include "macro.asm"
+
 entry:
   mov rsp, 0x00080000
   call memory.init
@@ -12,8 +14,8 @@ entry:
   call interrupts.init
   call objects.init
   call device.init
-  mov eax, [device.boot]
-  test eax, eax
+  ldid a, [device.boot]
+  testid a
   jz error.failed
   mov rax, msg.ok
   call console_out.prints
@@ -33,8 +35,6 @@ error:
 end:
   hlt
   jmp end
-
-%include "macro.asm"
 
 %include "console-out.asm"
 %include "descriptor-tables.asm"
