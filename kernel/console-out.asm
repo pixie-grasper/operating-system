@@ -117,6 +117,8 @@ console_out:
   jmp .prints.1
 
 .scroll:
+  sub edi, 80 * 2
+  ret
   pushs a, c, si, di
   mov ecx, 80 * 24 * 2 / 4
   mov esi, 0x000b8000 + 80 * 2
@@ -139,40 +141,66 @@ console_out:
   sub edi, 80 * 2
   ret
 
-.printdot@s:
-  pushs a, c, d, di
+.putchar:
+  pushs c, d, di
+  push rax
   mov rdi, .lock
   call atomic.lock
+  pop rax
   mov edi, [.current.pos]
-  mov word [edi], 0x072e
+  mov word [edi], ax
   add edi, 2
   cmp edi, 0x000b8000 + 80 * 25 * 2
-  jb .printdot@s.1
+  jb .putchar.1
   call .scroll
-.printdot@s.1:
+.putchar.1:
   mov [.current.pos], edi
   call .cursor.set
   mov rdi, .lock
   call atomic.unlock
-  pops a, c, d, di
+  pops c, d, di
   ret
 
-.printcolon@s:
-  pushs a, c, d, di
-  mov rdi, .lock
-  call atomic.lock
-  mov edi, [.current.pos]
-  mov word [edi], 0x073a
-  add edi, 2
-  cmp edi, 0x000b8000 + 80 * 25 * 2
-  jb .printcolon@s.1
-  call .scroll
-.printcolon@s.1:
-  mov [.current.pos], edi
-  call .cursor.set
-  mov rdi, .lock
-  call atomic.unlock
-  pops a, c, d, di
+.printsp:
+  pushs a
+  mov eax, 0x0720
+  call .putchar
+  pops a
+  ret
+
+.printlp:
+  pushs a
+  mov eax, 0x0728
+  call .putchar
+  pops a
+  ret
+
+.printrp:
+  pushs a
+  mov eax, 0x0729
+  call .putchar
+  pops a
+  ret
+
+.printcomma:
+  pushs a
+  mov eax, 0x072c
+  call .putchar
+  pops a
+  ret
+
+.printdot:
+  pushs a
+  mov eax, 0x072e
+  call .putchar
+  pops a
+  ret
+
+.printcolon:
+  pushs a
+  mov eax, 0x073a
+  call .putchar
+  pops a
   ret
 
   ; in: a = signed integer
