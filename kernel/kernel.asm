@@ -19,6 +19,22 @@ entry:
   jz error.failed
   mov rax, msg.ok
   call console_out.prints
+
+  ; list-up files
+  mov rax, msg.listupping
+  call console_out.prints
+  ldid a, [device.boot]
+  call iso9660.begin
+  testid a
+  jz end
+  or edx, -1
+  call iso9660.ls
+  call objects.unref
+  mov rax, msg.nl
+  call console_out.prints
+  mov rax, msg.ok
+  call console_out.prints
+
   jmp end
 
 error:
@@ -45,9 +61,11 @@ end:
 
 msg:
 .initializing: db 'Initializing... ', 0
+.listupping: db 'List up files... ', 0x0a, 0
 .ok: db 'OK.', 0x0a, 0
 .bad: db 'Failed.', 0
 .nem: db 'Not enough memory.', 0
+.nl: db 0x0a, 0
 
 ; one page for the GDT, one for the IDT, one for the TLS
 global_page_size equ 3
