@@ -125,8 +125,9 @@ iso9660:
 
   ; in: a = iterator id
   ; out: a = octet-buffer id indicates a name of the refed object
+  ; out: d = name.length
 .iterator.getname:
-  pushs b, c, d, si, di, bp
+  pushs b, c, si, di, bp
   addr_from_id si, a
   ldaddr bp, [rsi + object.content]
   ldid a, [rbp + object.internal.content]
@@ -153,9 +154,8 @@ iso9660:
   mov rbx, rdi
   add rbx, 33
   xor rcx, rcx
-  xor rdx, rdx
   mov cl, [rdi + 32]
-  mov edx, ecx
+  mov rdx, rcx
   add ecx, 0x03
   shr ecx, 2
   jz .iterator.getname.2
@@ -174,7 +174,7 @@ iso9660:
   sub rdi, rbx
   mov [rdi + rdx], ecx
   movid a, si
-  pops b, c, d, si, di, bp
+  pops b, c, si, di, bp
   ret
 
   ; in: a = iterator id refs directory
