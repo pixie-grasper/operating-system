@@ -117,8 +117,6 @@ console_out:
   jmp .prints.1
 
 .scroll:
-  sub edi, 80 * 2
-  ret
   pushs a, c, si, di
   mov ecx, 80 * 24 * 2 / 4
   mov esi, 0x000b8000 + 80 * 2
