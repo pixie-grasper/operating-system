@@ -32,6 +32,35 @@ iso9660:
   pops a, d
   ret
 
+  ; in: a = iterator id
+.ls:
+  pushs d
+  or edx, -1
+  call console_out.printlp
+.ls.1:
+  call .iterator.isrefsspecialdirectory
+  jnc .ls.4
+.ls.2:
+  inc edx
+  jz .ls.3
+  call console_out.printcomma
+  call console_out.printsp
+.ls.3:
+  call .iterator.printname
+  call .iterator.isrefsfile
+  jnc .ls.4
+  pushs a
+  call .iterator.deref.directory
+  call .ls
+  pops a
+.ls.4:
+  call .iterator.succ
+  call .iterator.isend
+  jc .ls.1
+  call console_out.printrp
+  pops d
+  ret
+
   ; in: a = device
   ; out: a = iterator id of the root | nil
 .begin:
@@ -90,9 +119,9 @@ iso9660:
   ldaddr a, [rsi + object.content]
   ldid a, [rax + object.internal.content]
   call device.index
-  xor rsi, rsi
-  mov sil, [rax]
-  add [rcx + object.internal.content + word.size], esi
+  xor rdx, rdx
+  mov dl, [rax]
+  add [rcx + object.internal.content + word.size], edx
   ldaddr d, [rsi + object.content]
   ldid a, [rdx + object.internal.content + word.size]
   call objects.unref
@@ -101,6 +130,26 @@ iso9660:
 .iterator.succ.1:
   pops a, b, c, d, si
   ret
+
+  ; in: a = iterator id
+.iterator.isrefsspecialdirectory:
+  pushs a, b, c, d, si
+  addr_from_id si, a
+  ldaddr c, [rsi + object.content]
+  ldid a, [rcx + object.internal.content]
+  ldaddr b, [rsi + object.content + word.size]
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content]
+  shl rdx, 11
+  xor rcx, rcx
+  mov ecx, [rbx + object.internal.content + word.size]
+  add rdx, rcx
+  add rdx, 33
+  call device.index
+  cmp byte [rax], 1
+  pops a, b, c, d, si
+  jbe return.true
+  jmp return.false
 
   ; in: a = iterator id
 .iterator.isrefsfile:
@@ -175,6 +224,16 @@ iso9660:
   mov [rdi + rdx], ecx
   movid a, si
   pops b, c, si, di, bp
+  ret
+
+  ; in: a = iterator id
+.iterator.printname:
+  pushs a, d
+  call .iterator.getname
+  xor rdx, rdx
+  call octet_buffer.index
+  call console_out.prints
+  pops a, d
   ret
 
   ; in: a = iterator id refs directory
@@ -294,6 +353,21 @@ iso9660:
   cmp eax, [rcx + object.internal.content + word.size * 2]
   pops a, c, d
   jae return.true
+  pushs a, b, c, d, si
+  addr_from_id si, a
+  ldaddr c, [rsi + object.content]
+  ldid a, [rcx + object.internal.content]
+  ldaddr b, [rsi + object.content + word.size]
+  xor rdx, rdx
+  mov edx, [rbx + object.internal.content]
+  shl rdx, 11
+  xor rcx, rcx
+  mov ecx, [rbx + object.internal.content + word.size]
+  add rdx, rcx
+  call device.index
+  cmp byte [rax], 0
+  pops a, b, c, d, si
+  je return.true
   jmp return.false
 
   ; in: a = page address
