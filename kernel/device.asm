@@ -166,7 +166,7 @@ device:
   add rax, rdi
   jmp .index.end
 .index.failed:
-  xor rax, rax
+  ldnil a
 .index.end:
   pops b, c, d, si, di, bp
   ret
